@@ -42,7 +42,6 @@
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim2;
-TIM_HandleTypeDef htim3;
 
 /* TIM2 init function */
 void MX_TIM2_Init(void)
@@ -79,29 +78,12 @@ void MX_TIM2_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 4;
+  sConfigIC.ICFilter = 7;
   HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_2);
 
-}
-/* TIM3 init function */
-void MX_TIM3_Init(void)
-{
-  TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
+  HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3);
 
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0xffff;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_Base_Init(&htim3);
-
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig);
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig);
+  HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4);
 
 }
 
@@ -134,21 +116,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 
   /* USER CODE END TIM2_MspInit 1 */
   }
-  else if(htim_base->Instance==TIM3)
-  {
-  /* USER CODE BEGIN TIM3_MspInit 0 */
-
-  /* USER CODE END TIM3_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_TIM3_CLK_ENABLE();
-
-    /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM3_IRQn);
-  /* USER CODE BEGIN TIM3_MspInit 1 */
-
-  /* USER CODE END TIM3_MspInit 1 */
-  }
 }
 
 void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
@@ -170,25 +137,10 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
     /* Peripheral interrupt Deinit*/
     HAL_NVIC_DisableIRQ(TIM2_IRQn);
 
+  }
   /* USER CODE BEGIN TIM2_MspDeInit 1 */
 
   /* USER CODE END TIM2_MspDeInit 1 */
-  }
-  else if(htim_base->Instance==TIM3)
-  {
-  /* USER CODE BEGIN TIM3_MspDeInit 0 */
-
-  /* USER CODE END TIM3_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_TIM3_CLK_DISABLE();
-
-    /* Peripheral interrupt Deinit*/
-    HAL_NVIC_DisableIRQ(TIM3_IRQn);
-
-  /* USER CODE BEGIN TIM3_MspDeInit 1 */
-
-  /* USER CODE END TIM3_MspDeInit 1 */
-  }
 } 
 
 /* USER CODE BEGIN 1 */

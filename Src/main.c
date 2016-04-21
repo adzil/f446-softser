@@ -39,8 +39,10 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include <stm32f4xx_hal_tim.h>
 #include "cmsis_os.h"
 #include "macros.h"
+#include "stm32f4xx.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -113,7 +115,6 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_USART2_UART_Init();
-  MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
   // Board - Serial identification
@@ -142,7 +143,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  
+
   /* USER CODE END 3 */
 
 }

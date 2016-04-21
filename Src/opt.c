@@ -69,8 +69,7 @@ void __OPT_RXSetStatus(OPT_RXHandleType *Handle, OPT_RXStatusType Status) {
   } else {
     return; // Undefined status value
   }
-  
-  // Set the apropriate status
+  // Set the apropriate status 
   Handle->Status = Status;
 }
 
