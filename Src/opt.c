@@ -60,7 +60,8 @@ void __OPT_RXSetStatus(OPT_RXHandleType *Handle, OPT_RXStatusType Status) {
     Handle->htim->Instance->ARR = Handle->BitPeriod >> 1;
     Handle->htim->Instance->CCR1 = Handle->BitPeriod >> 3;
     Handle->htim->Instance->CCR3 = Handle->BitPeriod >> 2;
-    Handle->htim->Instance->CCR4 = (Handle->BitPeriod >> 2) + (Handle->BitPeriod >> 3);
+    Handle->htim->Instance->CCR4 = (Handle->BitPeriod >> 2) +
+        (Handle->BitPeriod >> 3);
     Handle->htim->Instance->CNT = 0;
     // Start output compare interrupts
     HAL_TIM_OC_Start_IT(Handle->htim, TIM_CHANNEL_1);

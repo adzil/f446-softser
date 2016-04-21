@@ -14,12 +14,10 @@
 #include "tim.h"
 #include "macros.h"
 
+#define DRV_RX_WAIT_COUNT 15
+
 // Macro for absolute delta
 #define __delta(a, b) ((a > b) ? (a - b):(b - a))
-
-// Macro for Timer Handle
-#define RX_HTIM htim2
-#define RX_TIM RX_HTIM.Instance
 
 // Receive Driver Status TypeDef
 typedef enum {
@@ -31,7 +29,11 @@ typedef enum {
 
 typedef struct {
   DRV_RX_StatusTypeDef Status;
-  uint32_t SyncPeriod;
+  uint32_t Period;
+  uint32_t ICValue;
+  uint8_t WaitCount;
+  TIM_HandleTypeDef *htim;
+  TIM_TypeDef *TIM;
 } DRV_RX_HandleTypeDef;
 
 typedef struct {
@@ -39,10 +41,13 @@ typedef struct {
 } DRV_TX_HandleTypeDef;
 
 typedef struct {
-  DRV_RX_HandleTypeDef RX;
-  DRV_TX_HandleTypeDef TX;
+  DRV_RX_HandleTypeDef *RX;
+  DRV_TX_HandleTypeDef *TX;
 } DRV_HandleTypeDef;
 
 extern DRV_HandleTypeDef hDrv;
+
+/* Public function prototypes */
+void DRV_Init(void);
 
 #endif //__DRV
