@@ -541,6 +541,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\drv.c</FilePath>
             </File>
+            <File>
+              <FileName>memory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\memory.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

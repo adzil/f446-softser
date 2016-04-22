@@ -42,6 +42,7 @@
 #include "cmsis_os.h"
 #include "macros.h"
 #include "drv.h"
+#include "memory.h"
 #include "stm32f4xx.h"
 /* USER CODE END Includes */
 
@@ -123,10 +124,8 @@ int main(void)
   // Initialize Optical Driver
   DRV_Init();
   DRV_RX_Start();
-  // Start the IC (Input Capture) on Timer 2
-  //HAL_TIM_Base_Start(&htim2);
-  //HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1);
-  //HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+  // Initialize Memory
+  MEM_Init();
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);

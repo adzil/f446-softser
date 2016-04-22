@@ -3,24 +3,22 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/Src/stm32f4xx_it.c" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Src/stm32f4xx_hal_msp.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/main.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/usart.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/drv.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/gpio.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/tim.c" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Src/phy.c" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Src/opt.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/memory.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/stm32f4xx_hal_msp.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/macros.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/drv.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/usart.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/memory.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/tim.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/mxconstants.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/phy.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/opt.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/gpio.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_it.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mxconstants.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_hal_conf.h" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
