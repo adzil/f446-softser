@@ -496,14 +496,9 @@
               <FilePath>../Src/usart.c</FilePath>
             </File>
             <File>
-              <FileName>phy.c</FileName>
+              <FileName>drv.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Src\phy.c</FilePath>
-            </File>
-            <File>
-              <FileName>opt.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\opt.c</FilePath>
+              <FilePath>..\Src\drv.c</FilePath>
             </File>
           </Files>
         </Group>

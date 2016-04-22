@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 #define __GPIO_WRITE(GPIOx, PIN, STATE) if (STATE) GPIOx->BSRR |= (1<<PIN); else GPIOx->BSRR |= (0x10000<<PIN)
-#define __GPIO_READ(GPIOx, PIN) (GPIOx->IDR >> PIN) & 1
+#define __GPIO_READ(GPIOx, PIN) (uint8_t)((GPIOx->IDR >> PIN) & 1)
 
 inline uint8_t __popcnt8(uint8_t in) {
 	in -= (in >> 1) & 0x55;

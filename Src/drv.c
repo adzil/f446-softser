@@ -6,10 +6,11 @@
  */
 
 /* Self header includes */
-#include <stm32f446xx.h>
 #include <drv.h>
-#include <stm32f4xx_hal_tim.h>
 #include "drv.h"
+
+/* Constants */
+const uint8_t popcnt3 = 0xE8;
 
 /* Global variables */
 DRV_HandleTypeDef hDrv;
@@ -19,6 +20,10 @@ DRV_TX_HandleTypeDef hTXDrv;
 /* Private function prototypes */
 void DRV_RX_WaitReset(DRV_HandleTypeDef *Handle);
 void DRV_RX_WaitTrigger(DRV_HandleTypeDef *Handle);
+void DRV_RX_SampleReset(DRV_HandleTypeDef *Handle);
+void DRV_RX_SampleTrigger(DRV_HandleTypeDef *Handle);
+void DRV_RX_DataReset(DRV_HandleTypeDef *Handle);
+void DRV_RX_DataWrite(DRV_HandleTypeDef *Handle);
 
 void DRV_RX_SetStatus(DRV_HandleTypeDef *Handle, DRV_RX_StatusTypeDef Status);
 
@@ -31,6 +36,14 @@ void DRV_Init(void) {
   hDrv.RX->htim = &htim2;
   hDrv.RX->TIM = hDrv.RX->htim->Instance;
   hDrv.RX->Status = DRV_RX_STATUS_RESET;
+}
+
+void DRV_RX_Start(void) {
+  DRV_RX_SetStatus(&hDrv, DRV_RX_STATUS_WAIT);
+}
+
+void DRV_RX_Stop(void) {
+  DRV_RX_SetStatus(&hDrv, DRV_RX_STATUS_RESET);
 }
 
 inline void DRV_RX_WaitReset(DRV_HandleTypeDef *Handle) {
@@ -49,8 +62,42 @@ void DRV_RX_WaitTrigger(DRV_HandleTypeDef *Handle) {
     }
   } else {
     DRV_RX_WaitReset(Handle);
-    Handle->RX->WaitCount = NewPeriod;
+    Handle->RX->Period = NewPeriod;
   }
+}
+
+inline void DRV_RX_DataReset(DRV_HandleTypeDef *Handle) {
+  Handle->RX->DataCount = DRV_RX_DATA_COUNT;
+}
+
+void DRV_RX_DataWrite(DRV_HandleTypeDef *Handle) {
+  uint8_t NewData;
+
+  NewData = (popcnt3 >> (Handle->RX->SampleBit & 7)) & 1;
+  Handle->RX->DataBit = (Handle->RX->DataBit << 1) | NewData;
+
+  if (!--Handle->RX->DataCount) {
+    DRV_RX_DataReset(Handle);
+  }
+
+  if (Handle->RX->Status == DRV_RX_STATUS_SYNC) {
+    // Check for TDP symbols
+    if (Handle->RX->DataBit == DRV_RX_DATA_TDP) {
+      DRV_RX_SetStatus(Handle, DRV_RX_STATUS_ACTIVE);
+    }
+  }
+}
+
+inline void DRV_RX_SampleReset(DRV_HandleTypeDef *Handle) {
+  if (!Handle->RX->SampleLock) {
+    // Reset the timer counter
+    Handle->RX->TIM->CNT = 0;
+  }
+}
+
+inline void DRV_RX_SampleTrigger(DRV_HandleTypeDef *Handle) {
+  Handle->RX->SampleBit = (Handle->RX->SampleBit << 1) |
+      (Handle->RX->SampleValue);
 }
 
 void DRV_RX_SetStatus(DRV_HandleTypeDef *Handle, DRV_RX_StatusTypeDef Status) {
@@ -92,7 +139,8 @@ void DRV_RX_SetStatus(DRV_HandleTypeDef *Handle, DRV_RX_StatusTypeDef Status) {
   } else if (Status == DRV_RX_STATUS_ACTIVE &&
              Handle->RX->Status == DRV_RX_STATUS_SYNC) {
     // Only change status to active on sync
-    (void) 0;
+    // Reset the data counter
+    DRV_RX_DataReset(Handle);
   } else {
     // Illegal status set
     return;
@@ -100,4 +148,28 @@ void DRV_RX_SetStatus(DRV_HandleTypeDef *Handle, DRV_RX_StatusTypeDef Status) {
 
   // Set the appropriate status
   Handle->RX->Status = Status;
+}
+
+void DRV_RX_TimerICCallback(DRV_HandleTypeDef *Handle) {
+  if (Handle->RX->Status == DRV_RX_STATUS_WAIT) {
+    DRV_RX_WaitTrigger(Handle);
+  } else if (Handle->RX->Status == DRV_RX_STATUS_SYNC ||
+      Handle->RX->Status == DRV_RX_STATUS_ACTIVE) {
+    DRV_RX_SampleReset(Handle);
+  }
+}
+
+void DRV_RX_TimerOCCallback(DRV_HandleTypeDef *Handle) {
+  if (Handle->RX->Status == DRV_RX_STATUS_SYNC ||
+      Handle->RX->Status == DRV_RX_STATUS_ACTIVE) {
+    DRV_RX_SampleTrigger(Handle);
+    // Lock or unlock the sample
+    if (Handle->RX->htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+      Handle->RX->SampleLock = 1;
+    } else if (Handle->RX->htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
+      Handle->RX->SampleLock = 0;
+      // Write the sample to data
+      DRV_RX_DataWrite(Handle);
+    }
+  }
 }

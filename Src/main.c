@@ -39,9 +39,9 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-#include <stm32f4xx_hal_tim.h>
 #include "cmsis_os.h"
 #include "macros.h"
+#include "drv.h"
 #include "stm32f4xx.h"
 /* USER CODE END Includes */
 
@@ -52,7 +52,7 @@
 osThreadId tid_blinkLED;
 osThreadId tid_sendSerial;
 char Buf[512];
-extern uint8_t printval;
+//extern uint8_t printval;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
@@ -86,7 +86,7 @@ void blinkLED(void const *argument) {
 void sendSerial(void const *argument) {
   while(1) {
     osSignalWait(1, osWaitForever);
-    HAL_UART_Transmit(&huart2, &printval, 1, 1);
+    //HAL_UART_Transmit(&huart2, &printval, 1, 1);
     //sprintf(Buf, "%x ", printval);
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
@@ -120,8 +120,9 @@ int main(void)
   // Board - Serial identification
   sprintf(Buf, "NUCLEO-F446 Board -- UART2 115200 Baud.\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
-  // Initialize PHY
-  PHY_Init();
+  // Initialize Optical Driver
+  DRV_Init();
+  DRV_RX_Start();
   // Start the IC (Input Capture) on Timer 2
   //HAL_TIM_Base_Start(&htim2);
   //HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1);

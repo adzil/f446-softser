@@ -36,9 +36,7 @@
 #include "stm32f4xx_it.h"
 
 /* USER CODE BEGIN 0 */
-#include "macros.h"
-#include "phy.h"
-#include "opt.h"
+#include "drv.h"
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -48,6 +46,7 @@ extern TIM_HandleTypeDef htim2;
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
 /******************************************************************************/
 
+#if 0
 /**
 * @brief This function handles System tick timer.
 */
@@ -62,6 +61,7 @@ void SysTick_Handler(void)
 
   /* USER CODE END SysTick_IRQn 1 */
 }
+#endif
 
 /******************************************************************************/
 /* STM32F4xx Peripheral Interrupt Handlers                                    */
@@ -77,7 +77,7 @@ void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
   // Read sample value on IRQ
-  OPT_RXSampleStart(&hoptrx);
+  DRV_RX_SampleCallback(&hDrv);
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -87,14 +87,14 @@ void TIM2_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-  if (htim == hoptrx.htim) {
-    OPT_RXTimICInterruptCallback(&hoptrx);
+  if (htim == hDrv.RX->htim) {
+    DRV_RX_TimerICCallback(&hDrv);
   }
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim == hoptrx.htim) {
-    OPT_RXTimOCInterruptCallback(&hoptrx);
+  if (htim == hDrv.RX->htim) {
+    DRV_RX_TimerOCCallback(&hDrv);
   }
 }
 /* USER CODE END 1 */
