@@ -6,7 +6,6 @@
  */
 
 /* Self header includes */
-#include <drv.h>
 #include "drv.h"
 
 /* Constants */
@@ -126,11 +125,14 @@ void DRV_RX_SetStatus(DRV_HandleTypeDef *Handle, DRV_RX_StatusTypeDef Status) {
              (Handle->RX->Status == DRV_RX_STATUS_WAIT ||
               Handle->RX->Status == DRV_RX_STATUS_ACTIVE)) {
     // Only change status to sync on wait or active
-    Handle->RX->TIM->ARR = Handle->RX->WaitCount >> 1;
-    Handle->RX->TIM->CCR1 = Handle->RX->WaitCount >> 3;
-    Handle->RX->TIM->CCR3 = Handle->RX->WaitCount >> 2;
-    Handle->RX->TIM->CCR4 = (Handle->RX->WaitCount >> 2) +
-                   (Handle->RX->WaitCount >> 3);
+    // Reset the data counter
+    DRV_RX_DataReset(Handle);
+    // Set the output compare values
+    Handle->RX->TIM->ARR = Handle->RX->Period >> 1;
+    Handle->RX->TIM->CCR1 = Handle->RX->Period >> 3;
+    Handle->RX->TIM->CCR3 = Handle->RX->Period >> 2;
+    Handle->RX->TIM->CCR4 = (Handle->RX->Period >> 2) +
+                   (Handle->RX->Period >> 3);
     Handle->RX->TIM->CNT = 0;
     // Start output compare interrupt
     HAL_TIM_OC_Start_IT(Handle->RX->htim, TIM_CHANNEL_1);
