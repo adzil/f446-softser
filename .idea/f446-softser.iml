@@ -9,6 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Src/gpio.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/tim.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/memory.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/phy.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/stm32f4xx_hal_msp.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/macros.h" isTestSource="false" />
@@ -17,7 +18,9 @@
       <sourceFolder url="file://$MODULE_DIR$/Inc/memory.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/tim.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/gpio.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/phy.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_it.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/nibble.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/mxconstants.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_hal_conf.h" isTestSource="false" />
     </content>
@@ -25,20 +28,20 @@
     <orderEntry type="module-library">
       <library name="Header Search Paths">
         <CLASSES>
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include-fixed" />
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include" />
+          <root url="file://C:/MinGW/include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
           <root url="file://C:/Keil_v5/ARM/Pack/Keil/STM32F4xx_DFP/2.7.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include-fixed" />
-          <root url="file://C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include" />
         </CLASSES>
         <SOURCES>
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include-fixed" />
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include" />
+          <root url="file://C:/MinGW/include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
           <root url="file://C:/Keil_v5/ARM/Pack/Keil/STM32F4xx_DFP/2.7.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include-fixed" />
-          <root url="file://C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include" />
         </SOURCES>
       </library>
     </orderEntry>

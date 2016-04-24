@@ -52,11 +52,18 @@
 /* Private variables ---------------------------------------------------------*/
 osThreadId tid_blinkLED;
 osThreadId tid_sendSerial;
+osThreadId tid_checkButton;
 char Buf[512];
-//extern uint8_t printval;
+extern uint8_t printval;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
+
+uint8_t TXData[] = "\x55\x55\x55\x55\x55\x55\x55\x9A\xD7\x65\x28This is a test "
+    "data from me please dont go\r\nThis should show up on your terminal "
+    "without any errors. If so, please check whether your connection is OK or"
+    " it may be had some issues. Please fix it before try to communicate with"
+    " our system. Thank you.\r\n\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,9 +81,9 @@ uint32_t HAL_GetTick(void) {
 
 void blinkLED(void const *argument) {
   while (1) {
-    __GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);                                        /* Turn specified LED on */
+    //__GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
     osSignalWait(0x0001, osWaitForever);
-    __GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
+    //__GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
     osSignalWait(0x0001, osWaitForever);
     
     //sprintf(Buf, "%x\r\n", serbuff);
@@ -87,14 +94,26 @@ void blinkLED(void const *argument) {
 void sendSerial(void const *argument) {
   while(1) {
     osSignalWait(1, osWaitForever);
-    //HAL_UART_Transmit(&huart2, &printval, 1, 1);
+    HAL_UART_Transmit(&huart2, &printval, 1, 1);
     //sprintf(Buf, "%x ", printval);
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
 }
 
+void checkButton(void const *argument) {
+  while (1) {
+    if (!__GPIO_READ(GPIOC, 13)) {
+			__GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
+      DRV_TX_Send(TXData, sizeof(TXData));
+      osDelay(1000);
+			__GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
+    }
+  }
+}
+
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
 osThreadDef (sendSerial, osPriorityNormal, 1, 0);
+osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
 
 int main(void)
@@ -116,6 +135,8 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_USART2_UART_Init();
+  MX_TIM4_Init();
+  MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
   // Board - Serial identification
@@ -126,12 +147,16 @@ int main(void)
   DRV_RX_Start();
   // Initialize Memory
   MEM_Init();
+  // Initialize PB6/TIM4CH1 for 38kHz IR modulation
+  HAL_TIM_Base_Init(&htim4);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
   tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
+  tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
-  osKernelStart ();
+  osKernelStart();
   /* USER CODE END 2 */
 
   /* Infinite loop */

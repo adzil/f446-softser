@@ -63,7 +63,7 @@ void MEM_Free(void *inptr) {
   uint8_t **head;
 
   // Set the pointer offset
-  ptr = (uint8_t *)(inptr - PTR_SIZE);
+  ptr = (uint8_t *)inptr - PTR_SIZE;
   // Set the head pointer
   head = *((uint8_t ***) ptr);
 

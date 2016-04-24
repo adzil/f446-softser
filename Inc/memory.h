@@ -2,6 +2,7 @@
 #define __MEMORY
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #define MEM_SM_SIZE 64
 #define MEM_SM_COUNT 16
