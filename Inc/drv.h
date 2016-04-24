@@ -47,10 +47,7 @@ typedef struct {
   uint8_t IdleCount;
   uint8_t SyncCount;
   uint8_t WaitCount;
-
   uint8_t DataCount;
-  uint8_t SampleBit;
-	uint8_t SampleLock;
 } DRV_RX_HandleTypeDef;
 
 typedef struct {
@@ -58,7 +55,6 @@ typedef struct {
   DRV_TX_StatusTypeDef Status;
   uint32_t DataLen;
   uint8_t *Data;
-  uint8_t SendBit;
 } DRV_TX_HandleTypeDef;
 
 typedef struct {

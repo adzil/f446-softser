@@ -54,7 +54,8 @@ osThreadId tid_blinkLED;
 osThreadId tid_sendSerial;
 osThreadId tid_checkButton;
 char Buf[512];
-extern uint8_t printval;
+extern uint8_t *Buffer;
+extern uint16_t BufferLen;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
@@ -92,9 +93,16 @@ void blinkLED(void const *argument) {
 }
 
 void sendSerial(void const *argument) {
+	uint8_t *ptr;
+	uint16_t blen;
+	
   while(1) {
     osSignalWait(1, osWaitForever);
-    HAL_UART_Transmit(&huart2, &printval, 1, 1);
+		ptr = Buffer;
+		blen = BufferLen;
+		while(blen--) {
+			HAL_UART_Transmit(&huart2, ptr++, 1, 1);
+		}
     //sprintf(Buf, "%x ", printval);
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
@@ -146,10 +154,10 @@ int main(void)
   DRV_Init();
   DRV_RX_Start();
   // Initialize Memory
-  MEM_Init();
+  //MEM_Init();
   // Initialize PB6/TIM4CH1 for 38kHz IR modulation
-  HAL_TIM_Base_Init(&htim4);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  //HAL_TIM_Base_Init(&htim4);
+  //HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);

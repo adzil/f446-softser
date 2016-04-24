@@ -7,20 +7,12 @@
 
 /* Self header includes */
 #include <drv.h>
-#include <stm32f446xx.h>
-
-/* Constants */
-const uint8_t popcnt3 = 0xE8;
 
 /* Global variables */
 DRV_HandleTypeDef DRV;
-uint8_t printval;
+uint8_t Buffer[1024];
+uint16_t BufferLen;
 extern osThreadId tid_sendSerial;
-
-/* Private function prototypes */
-//void DRV_RX_WaitTrigger(void);
-//void DRV_RX_SampleTrigger(void);
-//void DRV_RX_DataWrite(void);
 
 void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
@@ -44,14 +36,14 @@ void DRV_RX_Stop(void) {
 }
 
 void DRV_RX_Writer(void) {
-  uint8_t NewData;
+  uint8_t val;
 
-  NewData = (popcnt3 >> (DRV.RX.SampleBit & 7)) & 1;
-  DRV.RX.DataBit = (DRV.RX.DataBit << 1) | NewData;
+  DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
 
   if (DRV.RX.Status == DRV_RX_STATUS_WAIT) {
     // Check for TDP symbols
     if (DRV.RX.DataBit == DRV_RX_DATA_TDP) {
+      BufferLen = 0;
       DRV_RX_SetStatus(DRV_RX_STATUS_ACTIVE);
     }
     // Check for TDP timeout
@@ -61,11 +53,12 @@ void DRV_RX_Writer(void) {
   } else if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
     if (!--DRV.RX.DataCount) {
       DRV.RX.DataCount = DRV_RX_DATA_COUNT;
-      printval = DRV.RX.DataBit & 0xff;
-      if (printval != 0xff) {
-        osSignalSet(tid_sendSerial, 1);
+      val = DRV.RX.DataBit & 0xff;
+      if (val != 0xff) {
+        Buffer[BufferLen++] = val;
       } else {
         DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
+        osSignalSet(tid_sendSerial, 1);
       }
     }
   }
@@ -109,15 +102,11 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Reset state, disable all RX Timers
     HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_1);
     HAL_TIM_IC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_2);
-    HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_3);
-    HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_4);
     HAL_TIM_Base_Stop(DRV.RX.htim);
   } else if (Status == DRV_RX_STATUS_IDLE) {
     // Idle state, timer in low speed mode
     // Stop output compare interrupt
     HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_1);
-    HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_3);
-    HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_4);
     // Set the PSC, ARR, and CNT value
     TIM->ARR = 0xFF;
     TIM->CNT = 0;
@@ -142,19 +131,14 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
   } else if (Status == DRV_RX_STATUS_WAIT &&
              DRV.RX.Status == DRV_RX_STATUS_SYNC) {
     // Reset the data counter
-    DRV.RX.SampleLock = 0;
     DRV.RX.WaitCount = DRV_RX_WAIT_COUNT;
     // Set the output compare values
     TIM->ARR = DRV.RX.Period >> 1;
     TIM->CCR1 = DRV.RX.Period >> 3;
-    TIM->CCR3 = DRV.RX.Period >> 2;
-    TIM->CCR4 = (DRV.RX.Period >> 2) + (DRV.RX.Period >> 3);
     TIM->CNT = 0;
     // Start output compare interrupt
     HAL_TIM_OC_Start_IT(DRV.RX.htim, TIM_CHANNEL_1);
-    HAL_TIM_IC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_2);
-    HAL_TIM_OC_Start_IT(DRV.RX.htim, TIM_CHANNEL_3);
-    HAL_TIM_OC_Start_IT(DRV.RX.htim, TIM_CHANNEL_4);
+    //HAL_TIM_IC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_2);
   } else if (Status == DRV_RX_STATUS_ACTIVE &&
       DRV.RX.Status == DRV_RX_STATUS_WAIT) {
     // Only change status to active on sync
@@ -170,20 +154,6 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
 }
 
 /* Transmission functions */
-void DRV_TX_Load(void) {
-  uint8_t BitPos;
-
-  // Checks for data length in bits
-  if (DRV.TX.DataLen--) {
-    BitPos = DRV.TX.DataLen & 7;
-    DRV.TX.SendBit = (*DRV.TX.Data >> BitPos) & 1;
-    if (!BitPos) DRV.TX.Data++;
-  } else {
-    // End transmission
-    DRV.TX.SendBit = 0xff;
-  }
-}
-
 void DRV_TX_Send(uint8_t *Data, uint32_t DataLen) {
   DRV.TX.Data = Data;
   DRV.TX.DataLen = DataLen << 3;
@@ -197,7 +167,6 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
   if (Status == DRV_TX_STATUS_RESET) {
     HAL_TIM_Base_Stop_IT(DRV.TX.htim);
   } else if (Status == DRV_TX_STATUS_ACTIVE) {
-    DRV_TX_Load();
     TIM->CNT = 0;
     HAL_TIM_Base_Start_IT(DRV.TX.htim);
   } else {
@@ -215,34 +184,27 @@ void DRV_RX_TimerICCallback(void) {
     DRV_RX_Synchronizer();
   } else if (DRV.RX.Status == DRV_RX_STATUS_WAIT ||
       DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
-    /*if (!DRV.RX.SampleLock) {
-			DRV.RX.htim->Instance->CNT = 0;
-		}*/
-  }
+		DRV.RX.htim->Instance->CNT = 0;
+	}
 }
 
 void DRV_RX_TimerOCCallback(void) {
   if (DRV.RX.Status == DRV_RX_STATUS_WAIT ||
       DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
-    DRV.RX.SampleBit = (DRV.RX.SampleBit << 1) | __GPIO_READ(GPIOA, 1);
-		if (DRV.RX.htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-			DRV.RX.SampleLock = 1;
-    } else if (DRV.RX.htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
-			DRV.RX.SampleLock = 0;
-      // Write the sample to data
-      DRV_RX_Writer();
-    }
+    DRV_RX_Writer();
   }
 }
 
 void DRV_TX_TimerOverflowCallback(void) {
-  if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
-    if (DRV.TX.SendBit != 0xff) {
-      __GPIO_WRITE(GPIOA, 9, DRV.TX.SendBit);
-      DRV_TX_Load();
-    } else {
-      __GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
-      DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-    }
-  }
+	uint8_t BitPos;
+
+	// Checks for data length in bits
+	if (DRV.TX.DataLen--) {
+		BitPos = DRV.TX.DataLen & 7;
+		__GPIO_WRITE(GPIOA, 9, (*DRV.TX.Data & (1 << BitPos)));
+		if (!BitPos) DRV.TX.Data++;
+	} else {
+		DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
+	}
 }
