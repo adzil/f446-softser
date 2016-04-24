@@ -5,13 +5,13 @@
 #include <stddef.h>
 
 #define MEM_SM_SIZE 64
-#define MEM_SM_COUNT 16
+#define MEM_SM_COUNT 32
 #define MEM_MD_SIZE 256
-#define MEM_MD_COUNT 8
+#define MEM_MD_COUNT 32
 #define MEM_LG_SIZE 512
-#define MEM_LG_COUNT 4
+#define MEM_LG_COUNT 16
 #define MEM_XL_SIZE 1024
-#define MEM_XL_COUNT 2
+#define MEM_XL_COUNT 8
 
 #define PTR_SIZE sizeof(void *)
 

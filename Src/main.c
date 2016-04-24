@@ -43,6 +43,7 @@
 #include "macros.h"
 #include "drv.h"
 #include "memory.h"
+#include "phy.h"
 #include "stm32f4xx.h"
 /* USER CODE END Includes */
 
@@ -51,11 +52,9 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 osThreadId tid_blinkLED;
-osThreadId tid_sendSerial;
+//osThreadId tid_sendSerial;
 osThreadId tid_checkButton;
 char Buf[512];
-extern uint8_t *Buffer;
-extern uint16_t BufferLen;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
@@ -72,7 +71,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void PHY_Init(void);
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -82,9 +81,9 @@ uint32_t HAL_GetTick(void) {
 
 void blinkLED(void const *argument) {
   while (1) {
-    //__GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
+    __GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
     osSignalWait(0x0001, osWaitForever);
-    //__GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
+    __GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
     osSignalWait(0x0001, osWaitForever);
     
     //sprintf(Buf, "%x\r\n", serbuff);
@@ -92,7 +91,7 @@ void blinkLED(void const *argument) {
   }
 }
 
-void sendSerial(void const *argument) {
+/* void sendSerial(void const *argument) {
 	uint8_t *ptr;
 	uint16_t blen;
 	
@@ -106,21 +105,19 @@ void sendSerial(void const *argument) {
     //sprintf(Buf, "%x ", printval);
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
-}
+}*/
 
 void checkButton(void const *argument) {
   while (1) {
     if (!__GPIO_READ(GPIOC, 13)) {
-			__GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
       DRV_TX_Send(TXData, sizeof(TXData));
-      osDelay(1000);
-			__GPIO_WRITE(GPIOA, 5, GPIO_PIN_RESET);
+      osDelay(200);
     }
   }
 }
 
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
-osThreadDef (sendSerial, osPriorityNormal, 1, 0);
+//osThreadDef (sendSerial, osPriorityNormal, 1, 0);
 osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
 
@@ -128,7 +125,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  osKernelInitialize ();
+  osKernelInitialize();
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -154,14 +151,17 @@ int main(void)
   DRV_Init();
   DRV_RX_Start();
   // Initialize Memory
-  //MEM_Init();
+  MEM_Init();
+  // Initialize PHY layer
+  PHY_Init();
   // Initialize PB6/TIM4CH1 for 38kHz IR modulation
-  //HAL_TIM_Base_Init(&htim4);
-  //HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  TIM4->CCR1 = 2210;
+  HAL_TIM_Base_Init(&htim4);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
-  tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
+  //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
   osKernelStart();

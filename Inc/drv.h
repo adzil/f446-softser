@@ -14,6 +14,7 @@
 #include "tim.h"
 #include "macros.h"
 #include "cmsis_os.h"
+#include "phy.h"
 
 #define DRV_RX_IDLE_COUNT 8
 #define DRV_RX_SYNC_COUNT 8
@@ -52,9 +53,9 @@ typedef struct {
 
 typedef struct {
   TIM_HandleTypeDef *htim;
-  DRV_TX_StatusTypeDef Status;
   uint32_t DataLen;
   uint8_t *Data;
+  DRV_TX_StatusTypeDef Status;
 } DRV_TX_HandleTypeDef;
 
 typedef struct {

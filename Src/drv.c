@@ -10,9 +10,8 @@
 
 /* Global variables */
 DRV_HandleTypeDef DRV;
-uint8_t Buffer[1024];
-uint16_t BufferLen;
-extern osThreadId tid_sendSerial;
+//uint8_t Buffer[1024];
+//uint16_t BufferLen;
 
 void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
@@ -43,7 +42,6 @@ void DRV_RX_Writer(void) {
   if (DRV.RX.Status == DRV_RX_STATUS_WAIT) {
     // Check for TDP symbols
     if (DRV.RX.DataBit == DRV_RX_DATA_TDP) {
-      BufferLen = 0;
       DRV_RX_SetStatus(DRV_RX_STATUS_ACTIVE);
     }
     // Check for TDP timeout
@@ -55,10 +53,11 @@ void DRV_RX_Writer(void) {
       DRV.RX.DataCount = DRV_RX_DATA_COUNT;
       val = DRV.RX.DataBit & 0xff;
       if (val != 0xff) {
-        Buffer[BufferLen++] = val;
+        PHY_Data_Write(val);
+        //Buffer[BufferLen++] = val;
       } else {
         DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
-        osSignalSet(tid_sendSerial, 1);
+       // osSignalSet(tid_sendSerial, 1);
       }
     }
   }
@@ -73,7 +72,12 @@ void DRV_RX_Synchronizer(void) {
 
   if (DRV.RX.Status == DRV_RX_STATUS_SYNC) {
     if (__delta(NewPeriod, DRV.RX.Period) < 16) {
+      // Period averaging
+      DRV.RX.Period += NewPeriod;
+      DRV.RX.Period = (DRV.RX.Period >> 1);
+      // Check for sync counter
       if (!--DRV.RX.SyncCount) {
+        // Change state to TDP wait
         DRV_RX_SetStatus(DRV_RX_STATUS_WAIT);
       }
     } else {
@@ -108,10 +112,10 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Stop output compare interrupt
     HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_1);
     // Set the PSC, ARR, and CNT value
-    TIM->ARR = 0xFF;
-    TIM->CNT = 0;
-    TIM->CNT = 0xFF;
+    TIM->ARR = 0xFFFFFFFF;
     TIM->PSC = 2000;
+    // Reset the timer
+    TIM->EGR |= TIM_EGR_UG;
     // Reset the idle state
     DRV.RX.IdleCount = DRV_RX_IDLE_COUNT;
     // Start base timer and input capture
@@ -122,9 +126,9 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Only switch to sync status when idle
     // Reset the PSC, ARR, and CNT value
     TIM->ARR = 0xFFFFFFFF;
-    TIM->CNT = 0;
-    TIM->CNT = 0xFFFFFFFF;
     TIM->PSC = 0;
+    // Reset the timer
+    TIM->EGR |= TIM_EGR_UG;
     // Reset the sync state
     DRV.RX.IdleCount = DRV_RX_IDLE_COUNT;
     DRV.RX.SyncCount = DRV_RX_SYNC_COUNT;
@@ -135,7 +139,8 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Set the output compare values
     TIM->ARR = DRV.RX.Period >> 1;
     TIM->CCR1 = DRV.RX.Period >> 3;
-    TIM->CNT = 0;
+    // Reset the timer
+    TIM->EGR |= TIM_EGR_UG;
     // Start output compare interrupt
     HAL_TIM_OC_Start_IT(DRV.RX.htim, TIM_CHANNEL_1);
     //HAL_TIM_IC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_2);
@@ -148,7 +153,6 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Illegal status set
     return;
   }
-
   // Set the appropriate status
   DRV.RX.Status = Status;
 }
@@ -162,12 +166,14 @@ void DRV_TX_Send(uint8_t *Data, uint32_t DataLen) {
 }
 
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
-  TIM_TypeDef *TIM = DRV.TX.htim->Instance;
+  //TIM_TypeDef *TIM = DRV.TX.htim->Instance;
 
   if (Status == DRV_TX_STATUS_RESET) {
     HAL_TIM_Base_Stop_IT(DRV.TX.htim);
   } else if (Status == DRV_TX_STATUS_ACTIVE) {
-    TIM->CNT = 0;
+    //TIM4->CCR1 = 1105;
+    // Reset the timer
+    TIM4->EGR |= TIM_EGR_UG;
     HAL_TIM_Base_Start_IT(DRV.TX.htim);
   } else {
     // Invalid status set
@@ -179,12 +185,18 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
 
 /* Interrupt callback */
 void DRV_RX_TimerICCallback(void) {
+  TIM_TypeDef *TIM = DRV.RX.htim->Instance;
+  //uint32_t DiffTime;
+  
   if (DRV.RX.Status == DRV_RX_STATUS_IDLE ||
       DRV.RX.Status == DRV_RX_STATUS_SYNC) {
     DRV_RX_Synchronizer();
   } else if (DRV.RX.Status == DRV_RX_STATUS_WAIT ||
       DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
-		DRV.RX.htim->Instance->CNT = 0;
+    //DiffTime = TIM->CCR2 >> 4;
+    //if (DiffTime == 0 || DiffTime == (TIM->ARR >> 4)) {
+      TIM->EGR |= TIM_EGR_UG;
+    //}
 	}
 }
 
@@ -201,10 +213,17 @@ void DRV_TX_TimerOverflowCallback(void) {
 	// Checks for data length in bits
 	if (DRV.TX.DataLen--) {
 		BitPos = DRV.TX.DataLen & 7;
-		__GPIO_WRITE(GPIOA, 9, (*DRV.TX.Data & (1 << BitPos)));
+		if (*DRV.TX.Data & (1 << BitPos)) {
+      TIM4->CCR1 = 2210;
+		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
+    } else {
+      TIM4->CCR1 = 1105;
+		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_RESET);
+    }
 		if (!BitPos) DRV.TX.Data++;
 	} else {
 		DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+    TIM4->CCR1 = 2210;
 		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
 	}
 }
