@@ -304,5 +304,4 @@ void DRV_TX_TimerOverflowCallback(void) {
     TIM4->CCR1 = 1105;
     __GPIO_WRITE(GPIOA, 9, GPIO_PIN_RESET);
   }
-
 }
