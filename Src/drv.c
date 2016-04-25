@@ -42,7 +42,7 @@ void DRV_RX_Stop(void) {
 void DRV_RX_WriterReset(void);
 inline void DRV_RX_WriterReset(void) {
   if (DRV.RX.SR.RLL) {
-    DRV.RX.DataCount = DRV_RX_DATA_COUNT;
+    DRV.RX.DataCount = DRV_RX_DATA_COUNT << 1;
   } else {
     DRV.RX.DataCount = DRV_RX_DATA_COUNT;
   }
@@ -64,15 +64,15 @@ void DRV_RX_Writer(void) {
     }
   } else if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
     // Check for interleaving and fetch data
-    //if (!DRV.RX.SR.RLL || (DRV.RX.DataCount & 1)) {
+    if (!DRV.RX.SR.RLL || !(DRV.RX.DataCount & 1)) {
       DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
-    //}
+    }
     if (!--DRV.RX.DataCount) {
       DRV_RX_WriterReset();
       Data = DRV.RX.DataBit & 0xff;
-      if (PHY_RX_Write(Data) || Data == 0xff) {
+      if (Data == 0xff || PHY_RX_Write(Data)) {
         // End receiving message
-        DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
+        DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
       }
     }
   }
@@ -129,6 +129,8 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Set the PSC, ARR, and CNT value
     TIM->ARR = 0xFFFFFFFF;
     TIM->PSC = 2000;
+    // Clear input filter on Input Capture
+    TIM->CCMR1 &= ~TIM_CCMR1_IC2F;
     // Reset the timer
     TIM->EGR |= TIM_EGR_UG;
     // Reset the idle state
@@ -141,7 +143,7 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Only switch to sync status when idle
     // Reset the PSC, ARR, and CNT value
     TIM->ARR = 0xFFFFFFFF;
-    TIM->PSC = 0;
+    TIM->PSC = 50;
     // Reset the timer
     TIM->EGR |= TIM_EGR_UG;
     // Reset the sync state
@@ -154,6 +156,8 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     // Set the output compare values
     TIM->ARR = DRV.RX.Period >> 1;
     TIM->CCR1 = DRV.RX.Period >> 3;
+    // Set filter to Input Capture
+    TIM->CCMR1 |= TIM_CCMR1_IC2F;
     // Reset the timer
     TIM->EGR |= TIM_EGR_UG;
     // Start output compare interrupt
