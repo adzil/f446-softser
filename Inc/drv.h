@@ -16,9 +16,9 @@
 #include "cmsis_os.h"
 #include "phy.h"
 
-#define DRV_RX_IDLE_COUNT 8
+#define DRV_RX_IDLE_COUNT 4
 #define DRV_RX_SYNC_COUNT 8
-#define DRV_RX_WAIT_COUNT 128
+#define DRV_RX_WAIT_COUNT 200
 #define DRV_RX_DATA_COUNT 8
 #define DRV_RX_DATA_TDP 0x9AD76528
 
@@ -85,10 +85,5 @@ void DRV_RX_TimerICCallback(void);
 void DRV_RX_TimerOCCallback(void);
 
 void DRV_TX_TimerOverflowCallback(void);
-
-/* Inline functions */
-/* inline void DRV_RX_SampleCallback(void) {
-  Handle->RX->SampleValue = __GPIO_READ(GPIOA, 1);
-}*/
 
 #endif //__DRV
