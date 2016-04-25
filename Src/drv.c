@@ -35,7 +35,7 @@ void DRV_RX_Stop(void) {
 }
 
 void DRV_RX_Writer(void) {
-  uint8_t val;
+  uint8_t Data;
 
   DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
 
@@ -51,13 +51,10 @@ void DRV_RX_Writer(void) {
   } else if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
     if (!--DRV.RX.DataCount) {
       DRV.RX.DataCount = DRV_RX_DATA_COUNT;
-      val = DRV.RX.DataBit & 0xff;
-      if (val != 0xff) {
-        PHY_Data_Write(val);
-        //Buffer[BufferLen++] = val;
-      } else {
-        DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
-       // osSignalSet(tid_sendSerial, 1);
+      Data = DRV.RX.DataBit & 0xff;
+      if (PHY_RX_Write(Data)) {
+        // End receiving message
+        DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
       }
     }
   }

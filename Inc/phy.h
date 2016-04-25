@@ -26,20 +26,33 @@ typedef struct {
 } PHY_RS_HandleTypeDef;
 
 typedef struct {
-  BUF_HandleTypeDef RXBuf;
-  BUF_HandleTypeDef TXBuf;
-}PHY_Data_HandleTypeDef;
+  BUF_HandleTypeDef Buffer;
+  uint16_t WriteCount;
+  uint16_t ReadCount;
+  uint16_t Length;
+  typedef struct {
+    uint8_t RLL :1;
+  }SR;
+} PHY_RX_HandleTypeDef;
+
+typedef struct {
+  BUF_HandleTypeDef Buffer;
+
+} PHY_TX_HandleTypeDef;
 
 typedef struct {
   PHY_CC_HandleTypeDef CC;
   PHY_RS_HandleTypeDef RS;
-  PHY_Data_HandleTypeDef Data;
+  PHY_RX_HandleTypeDef RX;
+  PHY_TX_HandleTypeDef TX;
 } PHY_HandleTypeDef;
 
 extern PHY_HandleTypeDef PHY;
 
 void PHY_Init(void);
-void PHY_Data_Write(uint8_t Data);
-uint8_t *PHY_Data_Read(void);
+
+void PHY_RX_Reset(void);
+uint8_t PHY_RX_Write(uint8_t Data);
+uint8_t PHY_RX_Read(uint8_t *Data);
 
 #endif // __PHY

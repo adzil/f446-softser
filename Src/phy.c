@@ -1,13 +1,13 @@
 #include <phy.h>
 
 PHY_HandleTypeDef PHY;
-uint16_t PHY_CC_DistanceMem[PHY_CC_MEMORY_COUNT];
-uint16_t PHY_CC_LastDistanceMem[PHY_CC_MEMORY_COUNT];
-uint32_t PHY_CC_DataMem[PHY_CC_MEMORY_COUNT];
-uint32_t PHY_CC_LastDataMem[PHY_CC_MEMORY_COUNT];
+uint16_t PHY_CC_Distance_MEM[PHY_CC_MEMORY_COUNT];
+uint16_t PHY_CC_LastDistance_MEM[PHY_CC_MEMORY_COUNT];
+uint32_t PHY_CC_Data_MEM[PHY_CC_MEMORY_COUNT];
+uint32_t PHY_CC_LastData_MEM[PHY_CC_MEMORY_COUNT];
 
-uint8_t PHY_Data_RXBufMem[PHY_BUFFER_SIZE];
-uint8_t PHY_Data_TXBufMem[PHY_BUFFER_SIZE];
+uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
+uint8_t PHY_TX_MEM[PHY_BUFFER_SIZE];
 
 /* Function prototypes */
 uint8_t PHY_CC_Output(uint8_t input);
@@ -35,13 +35,13 @@ inline uint8_t PHY_CC_Popcnt(uint8_t input) {
 }
 
 void PHY_Init(void) {
-  PHY.CC.Distance = PHY_CC_DistanceMem;
-  PHY.CC.LastDistance = PHY_CC_LastDistanceMem;
-  PHY.CC.Data = PHY_CC_DataMem;
-  PHY.CC.LastData = PHY_CC_LastDataMem;
+  PHY.CC.Distance = PHY_CC_Distance_MEM;
+  PHY.CC.LastDistance = PHY_CC_LastDistance_MEM;
+  PHY.CC.Data = PHY_CC_Data_MEM;
+  PHY.CC.LastData = PHY_CC_LastData_MEM;
 
-  BUF_Init(&PHY.Data.RXBuf, PHY_Data_RXBufMem, 1, PHY_BUFFER_SIZE);
-  BUF_Init(&PHY.Data.TXBuf, PHY_Data_TXBufMem, 1, PHY_BUFFER_SIZE);
+  BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
+  BUF_Init(&PHY.TX.Buffer, PHY_TX_MEM, 1, PHY_BUFFER_SIZE);
 }
 
 void PHY_CC_EncodeReset(void) {
@@ -124,10 +124,31 @@ void PHY_CC_DecodeInput(uint8_t Input) {
   PHY.CC.Data = (uint32_t *) TempPtr;
 }
 
-void PHY_Data_Write(uint8_t Data) {
-  *((uint8_t *) BUF_Write(&PHY.Data.RXBuf)) = Data;
+void PHY_RX_Reset(void) {
+  BUF_Flush(&PHY.RX.Buffer);
+  PHY.RX.WriteCount = 0;
+  PHY.RX.ReadCount = 0;
+  PHY.RX.Length = 0;
 }
 
-uint8_t *PHY_Data_Read(void) {
-  return (uint8_t *) BUF_Write(&PHY.Data.RXBuf);
+uint8_t PHY_RX_Write(uint8_t Data) {
+  uint8_t *Buffer;
+
+  if (PHY.RX.Length && PHY.RX.WriteCount > PHY.RX.Length) return 1;
+  Buffer = BUF_Write(&PHY.RX.Buffer);
+  if (!Buffer) return 1;
+  *Buffer = Data;
+  PHY.RX.WriteCount++;
+  return 0;
+}
+
+uint8_t PHY_RX_Read(uint8_t *Data) {
+  uint8_t *Buffer;
+
+  if (PHY.RX.Length && PHY.RX.ReadCount > PHY.RX.Length) return 1;
+  Buffer = BUF_Read(&PHY.RX.Buffer);
+  if (!Buffer) return 1;
+  *Data = *Buffer;
+  PHY.RX.ReadCount++;
+  return 0;
 }
