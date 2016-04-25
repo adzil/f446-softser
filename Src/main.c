@@ -59,7 +59,7 @@ char Buf[512];
 // Required for HAL_GetTick function
 extern uint32_t os_time;
 
-uint8_t TXData[] = "\x55\x55\x55\x55\x55\x55\x55\x9A\xD7\x65\x28This is a test "
+uint8_t TXData[] = "This is a test "
     "data from me please dont go\r\nThis should show up on your terminal "
     "without any errors. If so, please check whether your connection is OK or"
     " it may be had some issues. Please fix it before try to communicate with"

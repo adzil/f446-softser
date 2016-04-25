@@ -5,14 +5,14 @@
 #include <stddef.h>
 
 typedef struct {
-  void *Head;
-  void *Tail;
-  void *Start;
-  void *End;
-  size_t Size;
+  uint8_t *Head;
+  uint8_t *Tail;
+  uint8_t *Start;
+  uint8_t *End;
+  uint16_t Size;
 }BUF_HandleTypeDef;
 
-void BUF_Init(BUF_HandleTypeDef *Handle, void *Buffer, uint16_t Size,
+void BUF_Init(BUF_HandleTypeDef *Handle, uint8_t *Buffer, uint16_t Size,
               uint16_t Length);
 void *BUF_Write(BUF_HandleTypeDef *Handle);
 void *BUF_Read(BUF_HandleTypeDef *Handle);

@@ -13,6 +13,9 @@ DRV_HandleTypeDef DRV;
 //uint8_t Buffer[1024];
 //uint16_t BufferLen;
 
+static uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
+                                    0x55,0x55, 0x55, 0x55,0x9A,0xD7,0x65,0x28};
+
 void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
 
@@ -21,9 +24,11 @@ void DRV_Init(void) {
   // Initiate receiver
   DRV.RX.htim = &htim2;
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
+  DRV.RX.SR.RLL = 1;
   // Initiate transmitter
   DRV.TX.htim = &htim3;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+  DRV.TX.SR.RLL = 1;
 }
 
 void DRV_RX_Start(void) {
@@ -34,12 +39,21 @@ void DRV_RX_Stop(void) {
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
 }
 
+void DRV_RX_WriterReset(void);
+inline void DRV_RX_WriterReset(void) {
+  if (DRV.RX.SR.RLL) {
+    DRV.RX.DataCount = DRV_RX_DATA_COUNT;
+  } else {
+    DRV.RX.DataCount = DRV_RX_DATA_COUNT;
+  }
+}
+
 void DRV_RX_Writer(void) {
   uint8_t Data;
 
-  DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
-
   if (DRV.RX.Status == DRV_RX_STATUS_WAIT) {
+    // Fetch new bit
+    DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
     // Check for TDP symbols
     if (DRV.RX.DataBit == DRV_RX_DATA_TDP) {
       DRV_RX_SetStatus(DRV_RX_STATUS_ACTIVE);
@@ -49,10 +63,14 @@ void DRV_RX_Writer(void) {
       DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
     }
   } else if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE) {
+    // Check for interleaving and fetch data
+    //if (!DRV.RX.SR.RLL || (DRV.RX.DataCount & 1)) {
+      DRV.RX.DataBit = (DRV.RX.DataBit << 1) | __GPIO_READ(GPIOA, 1);
+    //}
     if (!--DRV.RX.DataCount) {
-      DRV.RX.DataCount = DRV_RX_DATA_COUNT;
+      DRV_RX_WriterReset();
       Data = DRV.RX.DataBit & 0xff;
-      if (PHY_RX_Write(Data)) {
+      if (PHY_RX_Write(Data) || Data == 0xff) {
         // End receiving message
         DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
       }
@@ -145,7 +163,7 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
       DRV.RX.Status == DRV_RX_STATUS_WAIT) {
     // Only change status to active on sync
     // Reset the data counter
-    DRV.RX.DataCount = DRV_RX_DATA_COUNT;
+    DRV_RX_WriterReset();
   } else {
     // Illegal status set
     return;
@@ -157,8 +175,15 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
 /* Transmission functions */
 void DRV_TX_Send(uint8_t *Data, uint32_t DataLen) {
   DRV.TX.Data = Data;
-  DRV.TX.DataLen = DataLen << 3;
 
+  if (DRV.TX.SR.RLL) {
+    DRV.TX.DataLen = DataLen << 4;
+  } else {
+    DRV.TX.DataLen = DataLen << 3;
+  }
+
+  DRV.TX.Start = DRV_TX_StartBit;
+  DRV.TX.StartLen = sizeof(DRV_TX_StartBit) << 3;
   DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
 }
 
@@ -206,21 +231,42 @@ void DRV_RX_TimerOCCallback(void) {
 
 void DRV_TX_TimerOverflowCallback(void) {
 	uint8_t BitPos;
+  uint8_t TxBit;
 
 	// Checks for data length in bits
-	if (DRV.TX.DataLen--) {
-		BitPos = DRV.TX.DataLen & 7;
-		if (*DRV.TX.Data & (1 << BitPos)) {
-      TIM4->CCR1 = 2210;
-		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
-    } else {
-      TIM4->CCR1 = 1105;
-		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_RESET);
+  if (DRV.TX.StartLen) {
+    DRV.TX.StartLen--;
+    BitPos = DRV.TX.StartLen & 7;
+    TxBit = (*DRV.TX.Start >> BitPos) & 1;
+    if (!BitPos) {
+      DRV.TX.Start++;
     }
-		if (!BitPos) DRV.TX.Data++;
+  } else if (DRV.TX.DataLen) {
+    DRV.TX.DataLen--;
+    if (DRV.TX.SR.RLL) {
+      BitPos = DRV.TX.DataLen & 15;
+      TxBit = (*DRV.TX.Data >> (BitPos >> 1)) & 1;
+      if (!(DRV.TX.DataLen & 1)) {
+        TxBit ^= 1;
+      }
+    } else {
+      BitPos = DRV.TX.DataLen & 7;
+      TxBit = (*DRV.TX.Data >> BitPos) & 1;
+    }
+    if (!BitPos) {
+      DRV.TX.Data++;
+    }
 	} else {
 		DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-    TIM4->CCR1 = 2210;
-		__GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
+    TxBit = 1;
 	}
+
+  if (TxBit) {
+    TIM4->CCR1 = 2210;
+    __GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
+  } else {
+    TIM4->CCR1 = 1105;
+    __GPIO_WRITE(GPIOA, 9, GPIO_PIN_RESET);
+  }
+
 }

@@ -49,13 +49,21 @@ typedef struct {
   uint8_t SyncCount;
   uint8_t WaitCount;
   uint8_t DataCount;
+  struct {
+    uint8_t RLL: 1;
+  } SR;
 } DRV_RX_HandleTypeDef;
 
 typedef struct {
   TIM_HandleTypeDef *htim;
   uint32_t DataLen;
   uint8_t *Data;
+  uint16_t StartLen;
+  uint8_t *Start;
   DRV_TX_StatusTypeDef Status;
+  struct {
+    uint8_t RLL: 1;
+  } SR;
 } DRV_TX_HandleTypeDef;
 
 typedef struct {

@@ -30,7 +30,7 @@ typedef struct {
   uint16_t WriteCount;
   uint16_t ReadCount;
   uint16_t Length;
-  typedef struct {
+  struct {
     uint8_t RLL :1;
   }SR;
 } PHY_RX_HandleTypeDef;
