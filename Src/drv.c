@@ -13,8 +13,9 @@
 DRV_HandleTypeDef DRV;
 
 // Set Start Bit code (96bit FLP and 32bit TDP)
-static uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
-                                    0x55,0x55, 0x55, 0x55,0x9A,0xD7,0x65,0x28};
+const uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
+                                   0x55,0x55, 0x55, 0x55,0x9A,0xD7,0x65,0x28};
+const uint8_t DRV_TX_Visibility[] = {0xE2, 0xD4, 0xB1, 0x39};
 
 /* Private function prototypes */
 void DRV_RX_WriteReset(void);
@@ -32,6 +33,7 @@ void DRV_Init(void) {
   DRV.TX.htim = &htim3;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
   DRV.TX.SR.RLL = 1;
+  DRV.TX.SR.Visibility = 1;
 }
 
 // Start RX module
@@ -202,22 +204,35 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
 }
 
 /* Transmission functions */
+// Transmission data reset handler
+void DRV_TX_SetData(void) {
+  if (DRV.TX.Status == DRV_TX_STATUS_VISIBILITY) {
+    DRV.TX.Data = (uint8_t *) DRV_TX_Visibility;
+    DRV.TX.DataLen = sizeof(DRV_TX_Visibility) << 3;
+  } else if (DRV.TX.Status == DRV_TX_STATUS_SYNC) {
+    DRV.TX.Data = (uint8_t *) DRV_TX_StartBit;
+    DRV.TX.DataLen = sizeof(DRV_TX_StartBit) << 3;
+  } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+    DRV.TX.Data = DRV.TX.Send;
+    DRV.TX.DataLen = DRV.TX.SendLen;
+  }
+}
+
 // General purpose send function
 void DRV_TX_Send(uint8_t *Data, uint32_t DataLen) {
   DRV.TX.Data = Data;
 
   // Check for data length by RLL coding
   if (DRV.TX.SR.RLL) {
-    DRV.TX.DataLen = DataLen << 4;
+    DRV.TX.SendLen = DataLen << 4;
   } else {
-    DRV.TX.DataLen = DataLen << 3;
+    DRV.TX.SendLen = DataLen << 3;
   }
 
   // Set start bit template
-  DRV.TX.Start = DRV_TX_StartBit;
-  DRV.TX.StartLen = sizeof(DRV_TX_StartBit) << 3;
+  DRV.TX.Send = Data;
   // Activate the transmission module
-  DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
+  DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
 }
 
 // General purpose state machine set with some configurations
@@ -227,16 +242,24 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
   if (Status == DRV_TX_STATUS_RESET) {
     // Reset status, stop all timers
     HAL_TIM_Base_Stop_IT(DRV.TX.htim);
-  } else if (Status == DRV_TX_STATUS_ACTIVE) {
+  } else if ((Status == DRV_TX_STATUS_VISIBILITY &&
+      DRV.TX.SR.Visibility) || Status == DRV_TX_STATUS_SYNC) {
     // Activate the timer
-    TIM4->EGR |= TIM_EGR_UG;
+    //TIM4->EGR |= TIM_EGR_UG;
+    // Start the timer base interrupt
     HAL_TIM_Base_Start_IT(DRV.TX.htim);
+  } else if (Status == DRV_TX_STATUS_ACTIVE) {
+    // Check if there is nothing to send
+    if (!DRV.TX.Send || !DRV.TX.SendLen) return;
   } else {
     // Invalid status set
     return;
   }
 
+  // Set the new status
   DRV.TX.Status = Status;
+  // Set the data
+  DRV_TX_SetData();
 }
 
 /* Interrupt callback */
@@ -268,31 +291,38 @@ void DRV_TX_TimerOverflowCallback(void) {
   uint8_t TxBit;
 
 	// Checks for data length in bits
-  if (DRV.TX.StartLen) {
-    DRV.TX.StartLen--;
-    // Get bit position and transmission bit
-    BitPos = DRV.TX.StartLen & 7;
-    TxBit = (*DRV.TX.Start >> BitPos) & 1;
-    if (!BitPos) {
-      DRV.TX.Start++;
-    }
-  } else if (DRV.TX.DataLen) {
-    DRV.TX.DataLen--;
-    if (DRV.TX.SR.RLL) {
+  if (--DRV.TX.DataLen) {
+    // Check if the transmission is in RLL mode or not
+    if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+      // RLL mode, use 16 bit for position
       BitPos = DRV.TX.DataLen & 15;
       TxBit = (*DRV.TX.Data >> (BitPos >> 1)) & 1;
+      // Flip bit on second RLL
       if (!(DRV.TX.DataLen & 1)) {
         TxBit ^= 1;
       }
     } else {
+      // Not in RLL mode, continue using 8 bit
       BitPos = DRV.TX.DataLen & 7;
       TxBit = (*DRV.TX.Data >> BitPos) & 1;
     }
     if (!BitPos) {
+      // Advance data counter on zero
       DRV.TX.Data++;
     }
 	} else {
-		DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+    // TODO: Do not put the buffer reset here, delay ~1 clock.
+    if (DRV.TX.Status == DRV_TX_STATUS_VISIBILITY) {
+      DRV_TX_SetData();
+    } else if (DRV.TX.Status == DRV_TX_STATUS_SYNC) {
+      DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
+    } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+      if (DRV.TX.SR.Visibility) {
+        DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
+      } else {
+        DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+      }
+    }
     TxBit = 1;
 	}
 
