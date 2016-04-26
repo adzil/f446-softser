@@ -16,6 +16,7 @@ DRV_HandleTypeDef DRV;
 const uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
                                    0x55,0x55, 0x55, 0x55,0x9A,0xD7,0x65,0x28};
 const uint8_t DRV_TX_Visibility[] = {0xE2, 0xD4, 0xB1, 0x39};
+const uint8_t DRV_TX_Stop[] = {0x1};
 
 /* Private function prototypes */
 void DRV_RX_WriteReset(void);
@@ -28,12 +29,13 @@ void DRV_Init(void) {
   // Initiate receiver
   DRV.RX.htim = &htim2;
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
-  DRV.RX.SR.RLL = 1;
+  DRV.RX.SR.RLL = 0;
   // Initiate transmitter
   DRV.TX.htim = &htim3;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-  DRV.TX.SR.RLL = 1;
-  DRV.TX.SR.Visibility = 1;
+  DRV.TX.SR.RLL = 0;
+  DRV.TX.SR.Visibility = 0;
+  //DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
 }
 
 // Start RX module
@@ -127,7 +129,7 @@ void DRV_RX_Sync(void) {
     }
   } else if (DRV.RX.Status == DRV_RX_STATUS_IDLE) {
     // Check for suspecting FLP signal (had same input capture value)
-    if (__delta(NewPeriod, DRV.RX.Period) < 3) {
+    if (__delta(NewPeriod, DRV.RX.Period) < 2) {
       if (!--DRV.RX.IdleCount) {
         // FLP signal confirmed, set to synchronized status
 				DRV_RX_SetStatus(DRV_RX_STATUS_SYNC);
@@ -215,6 +217,56 @@ void DRV_TX_SetData(void) {
   } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
     DRV.TX.Data = DRV.TX.Send;
     DRV.TX.DataLen = DRV.TX.SendLen;
+  } else if (DRV.TX.Status == DRV_TX_STATUS_STOP) {
+    DRV.TX.Data = DRV_TX_Stop;
+    DRV.TX.DataLen = 1;
+  }
+}
+
+// Preload bit to the handle register
+void DRV_TX_Preload(void) {
+  uint8_t BitPos;
+
+  // Do not continue on reset
+  if (DRV.TX.Status == DRV_TX_STATUS_RESET) return;
+
+  // Set for the next state
+  if (!DRV.TX.DataLen) {
+    if (DRV.TX.Status == DRV_TX_STATUS_VISIBILITY) {
+      DRV_TX_SetData();
+    } else if (DRV.TX.Status == DRV_TX_STATUS_SYNC) {
+      DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
+    } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+      DRV_TX_SetStatus(DRV_TX_STATUS_STOP);
+    } else if (DRV.TX.Status == DRV_TX_STATUS_STOP) {
+      if (DRV.TX.SR.Visibility) {
+        DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
+      } else {
+        DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+      }
+    }
+  }
+
+  // Decrement the data counter
+  --DRV.TX.DataLen;
+  // Check if the transmission is in RLL mode or not
+  if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+    // RLL mode, use 16 bit for position
+    BitPos = DRV.TX.DataLen & 15;
+    DRV.TX.PreloadBit = (*DRV.TX.Data >> (BitPos >> 1)) & 1;
+    // Flip bit on second RLL
+    if (!(DRV.TX.DataLen & 1)) {
+      DRV.TX.PreloadBit ^= 1;
+    }
+  } else {
+    // Not in RLL mode, continue using 8 bit
+    BitPos = DRV.TX.DataLen & 7;
+    DRV.TX.PreloadBit = (*DRV.TX.Data >> BitPos) & 1;
+  }
+
+  if (!BitPos) {
+    // Advance data counter on zero
+    DRV.TX.Data++;
   }
 }
 
@@ -248,9 +300,13 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
     //TIM4->EGR |= TIM_EGR_UG;
     // Start the timer base interrupt
     HAL_TIM_Base_Start_IT(DRV.TX.htim);
-  } else if (Status == DRV_TX_STATUS_ACTIVE) {
+  } else if (Status == DRV_TX_STATUS_ACTIVE &&
+             DRV.TX.Status == DRV_TX_STATUS_SYNC) {
     // Check if there is nothing to send
     if (!DRV.TX.Send || !DRV.TX.SendLen) return;
+  } else if (Status == DRV_TX_STATUS_STOP &&
+              DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+    // Test
   } else {
     // Invalid status set
     return;
@@ -287,51 +343,15 @@ void DRV_RX_TimerOCCallback(void) {
 
 // Interrupt callback on Overflow match
 void DRV_TX_TimerOverflowCallback(void) {
-	uint8_t BitPos;
-  uint8_t TxBit;
-
-	// Checks for data length in bits
-  if (--DRV.TX.DataLen) {
-    // Check if the transmission is in RLL mode or not
-    if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
-      // RLL mode, use 16 bit for position
-      BitPos = DRV.TX.DataLen & 15;
-      TxBit = (*DRV.TX.Data >> (BitPos >> 1)) & 1;
-      // Flip bit on second RLL
-      if (!(DRV.TX.DataLen & 1)) {
-        TxBit ^= 1;
-      }
-    } else {
-      // Not in RLL mode, continue using 8 bit
-      BitPos = DRV.TX.DataLen & 7;
-      TxBit = (*DRV.TX.Data >> BitPos) & 1;
-    }
-    if (!BitPos) {
-      // Advance data counter on zero
-      DRV.TX.Data++;
-    }
-	} else {
-    // TODO: Do not put the buffer reset here, delay ~1 clock.
-    if (DRV.TX.Status == DRV_TX_STATUS_VISIBILITY) {
-      DRV_TX_SetData();
-    } else if (DRV.TX.Status == DRV_TX_STATUS_SYNC) {
-      DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
-    } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
-      if (DRV.TX.SR.Visibility) {
-        DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
-      } else {
-        DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-      }
-    }
-    TxBit = 1;
-	}
-
   // Send the data
-  if (TxBit) {
+  if (DRV.TX.PreloadBit) {
     TIM4->CCR1 = 2210;
     __GPIO_WRITE(GPIOA, 9, GPIO_PIN_SET);
   } else {
     TIM4->CCR1 = 1105;
     __GPIO_WRITE(GPIOA, 9, GPIO_PIN_RESET);
   }
+
+  DRV_TX_Preload();
 }
+

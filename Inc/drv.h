@@ -38,7 +38,8 @@ typedef enum {
   DRV_TX_STATUS_RESET,
   DRV_TX_STATUS_VISIBILITY,
   DRV_TX_STATUS_SYNC,
-  DRV_TX_STATUS_ACTIVE
+  DRV_TX_STATUS_ACTIVE,
+  DRV_TX_STATUS_STOP,
 } DRV_TX_StatusTypeDef;
 
 typedef struct {
@@ -62,6 +63,7 @@ typedef struct {
   const uint8_t *Data;
   uint32_t SendLen;
   const uint8_t *Send;
+  uint8_t PreloadBit;
   DRV_TX_StatusTypeDef Status;
   struct {
     uint8_t RLL: 1;
