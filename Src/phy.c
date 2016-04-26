@@ -7,7 +7,6 @@ uint32_t PHY_CC_Data_MEM[PHY_CC_MEMORY_COUNT];
 uint32_t PHY_CC_LastData_MEM[PHY_CC_MEMORY_COUNT];
 
 uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
-uint8_t PHY_TX_MEM[PHY_BUFFER_SIZE];
 
 /* Function prototypes */
 uint8_t PHY_CC_Output(uint8_t input);
@@ -41,7 +40,6 @@ void PHY_Init(void) {
   PHY.CC.LastData = PHY_CC_LastData_MEM;
 
   BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
-  BUF_Init(&PHY.TX.Buffer, PHY_TX_MEM, 1, PHY_BUFFER_SIZE);
 }
 
 void PHY_CC_EncodeReset(void) {
