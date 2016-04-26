@@ -59,9 +59,9 @@ typedef struct {
 typedef struct {
   TIM_HandleTypeDef *htim;
   uint32_t DataLen;
-  uint8_t *Data;
+  const uint8_t *Data;
   uint32_t SendLen;
-  uint8_t *Send;
+  const uint8_t *Send;
   DRV_TX_StatusTypeDef Status;
   struct {
     uint8_t RLL: 1;
