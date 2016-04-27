@@ -29,14 +29,14 @@ void DRV_Init(void) {
   // Initiate receiver
   DRV.RX.htim = &htim2;
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
-  DRV.RX.SR.RLL = 0;
+  DRV.RX.SR.RLL = 1;
 
   // Initiate transmitter
   DRV.TX.htim = &htim3;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-  DRV.TX.SR.RLL = 0;
-  DRV.TX.SR.Visibility = 0;
-  //DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
+  DRV.TX.SR.RLL = 1;
+  DRV.TX.SR.Visibility = 1;
+  DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
 }
 
 // Start RX module
@@ -181,7 +181,7 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     }
   } else if (Status == DRV_RX_STATUS_ACTIVE) {
     switch (DRV.RX.Status) {
-      case DRV_RX_STATUS_ACTIVE:
+      case DRV_RX_STATUS_WAIT:
         break;
 
       default:
@@ -439,7 +439,8 @@ void DRV_TX_TimerOverflowCallback(void) {
   }
   // Modify the preload data register
   if (--DRV.TX.PreloadDataLen) {
-    if (DRV.TX.SR.RLL && (DRV.TX.PreloadDataLen & 1)) {
+    if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE && 
+        (DRV.TX.PreloadDataLen & 1)) {
       // Generate Manchester RLL data
       DRV.TX.PreloadData ^= 0x80;
     } else {

@@ -25,7 +25,7 @@ void *BUF_Write(BUF_HandleTypeDef *Handle) {
   Next = BUF_Next(Handle, Handle->End);
   // Checks if the buffer is full
   if (Next == Handle->Start) return NULL;
-  Ptr = (uint8_t *) Handle->Buffer[Handle->End];
+  Ptr = Handle->Buffer + Handle->End;
   Handle->End = Next;
 
   return Ptr;
@@ -39,7 +39,7 @@ void *BUF_Read(BUF_HandleTypeDef *Handle) {
   if (Handle->Start == Handle->End) return NULL;
   // Get next address
   Next = BUF_Next(Handle, Handle->Start);
-  Ptr = (uint8_t *) Handle->Buffer[Handle->Start];
+  Ptr = Handle->Buffer + Handle->Start;
   Handle->Start = Next;
 
   return Ptr;
