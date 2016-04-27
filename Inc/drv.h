@@ -22,6 +22,8 @@
 #define DRV_RX_DATA_COUNT 8
 #define DRV_RX_DATA_TDP 0x9AD76528
 
+#define DRV_TX_PRELOAD_COUNT 8
+
 // Macro for absolute delta
 #define __delta(a, b) ((a > b) ? (a - b):(b - a))
 
@@ -63,7 +65,8 @@ typedef struct {
   const uint8_t *Data;
   uint32_t SendLen;
   const uint8_t *Send;
-  uint8_t PreloadBit;
+  uint8_t PreloadData;
+  uint8_t PreloadDataLen;
   DRV_TX_StatusTypeDef Status;
   struct {
     uint8_t RLL: 1;
