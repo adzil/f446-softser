@@ -33,7 +33,7 @@ typedef struct {
 } PHY_RX_HandleTypeDef;
 
 typedef struct {
-  uint8_t DUmmy;
+  uint8_t DUMMY;
 
 } PHY_TX_HandleTypeDef;
 

@@ -157,7 +157,7 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
     HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_1);
     // Set the PSC, ARR, and CNT value
     TIM->ARR = 0xFFFFFFFF;
-    TIM->PSC = 2000;
+    TIM->PSC = 1000;
     // Clear input filter on Input Capture
     TIM->CCMR1 &= ~TIM_CCMR1_IC2F;
     // Reset the timer
@@ -237,22 +237,20 @@ void DRV_TX_Preload(void) {
     } else if (DRV.TX.Status == DRV_TX_STATUS_SYNC) {
       DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
     } else if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
-      DRV_TX_SetStatus(DRV_TX_STATUS_STOP);
-    } else if (DRV.TX.Status == DRV_TX_STATUS_STOP) {
       if (DRV.TX.SR.Visibility) {
         DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
       } else {
-        DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+        DRV_TX_SetStatus(DRV_TX_STATUS_STOP);
       }
+    } else if (DRV.TX.Status == DRV_TX_STATUS_STOP) {
+      DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
     }
   }
 
-  // Decrement the data counter
-  --DRV.TX.DataLen;
   // Check if the transmission is in RLL mode or not
   if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
     // RLL mode, use 16 bit for position
-    BitPos = DRV.TX.DataLen & 15;
+    BitPos = --DRV.TX.DataLen & 15;
     DRV.TX.PreloadBit = (*DRV.TX.Data >> (BitPos >> 1)) & 1;
     // Flip bit on second RLL
     if (!(DRV.TX.DataLen & 1)) {
@@ -260,7 +258,7 @@ void DRV_TX_Preload(void) {
     }
   } else {
     // Not in RLL mode, continue using 8 bit
-    BitPos = DRV.TX.DataLen & 7;
+    BitPos = --DRV.TX.DataLen & 7;
     DRV.TX.PreloadBit = (*DRV.TX.Data >> BitPos) & 1;
   }
 
@@ -296,8 +294,6 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
     HAL_TIM_Base_Stop_IT(DRV.TX.htim);
   } else if ((Status == DRV_TX_STATUS_VISIBILITY &&
       DRV.TX.SR.Visibility) || Status == DRV_TX_STATUS_SYNC) {
-    // Activate the timer
-    //TIM4->EGR |= TIM_EGR_UG;
     // Start the timer base interrupt
     HAL_TIM_Base_Start_IT(DRV.TX.htim);
   } else if (Status == DRV_TX_STATUS_ACTIVE &&
