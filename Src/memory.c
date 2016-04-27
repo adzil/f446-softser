@@ -1,6 +1,12 @@
 /* Self library includes */
 #include "memory.h"
 
+static uint8_t MEM_Heap[MEM_HEAP_SIZE];
+static uint8_t *MEM_SM_Head;
+static uint8_t *MEM_MD_Head;
+static uint8_t *MEM_LG_Head;
+static uint8_t *MEM_XL_Head;
+
 static void mem_init_stn(int count, int size, uint8_t **head) {
   static uint8_t *ptr = MEM_Heap;
   int i;
@@ -67,12 +73,15 @@ void MEM_Free(void *inptr) {
   // Set the head pointer
   head = *((uint8_t ***) ptr);
 
-  // Checks if the address belongs to the memory pool
-  if (head == &MEM_SM_Head || head == &MEM_MD_Head ||
-      head == &MEM_LG_Head || head == &MEM_XL_Head) {
-    // Move the next pointer to the freed memory
-    *((uint8_t **)ptr) = *head;
-    // Move the head pointer
-    *head = ptr;
+  // Checks if the pointer is in the heap region
+  if (ptr < MEM_Heap + MEM_HEAP_SIZE) {
+    // Checks if the address belongs to the memory pool
+    if (head == &MEM_SM_Head || head == &MEM_MD_Head ||
+        head == &MEM_LG_Head || head == &MEM_XL_Head) {
+      // Move the next pointer to the freed memory
+      *((uint8_t **)ptr) = *head;
+      // Move the head pointer
+      *head = ptr;
+    }
   }
 }

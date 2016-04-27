@@ -22,12 +22,6 @@
         (MEM_LG_SIZE + PTR_SIZE) * MEM_LG_COUNT + \
         (MEM_XL_SIZE + PTR_SIZE) * MEM_XL_COUNT
 
-static uint8_t MEM_Heap[MEM_HEAP_SIZE];
-static uint8_t *MEM_SM_Head;
-static uint8_t *MEM_MD_Head;
-static uint8_t *MEM_LG_Head;
-static uint8_t *MEM_XL_Head;
-
 void MEM_Init(void);
 void *MEM_Alloc(int size);
 void MEM_Free(void *inptr);
