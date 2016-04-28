@@ -80,19 +80,30 @@ typedef struct {
   DRV_TX_HandleTypeDef TX;
 } DRV_HandleTypeDef;
 
+/* Static handler */
 extern DRV_HandleTypeDef DRV;
 
-/* Public function prototypes */
+/* Function prototypes */
 void DRV_Init(void);
+
 void DRV_RX_Start(void);
 void DRV_RX_Stop(void);
+void DRV_RX_WriteReset(void);
+void DRV_RX_ActiveHandler(void);
+void DRV_RX_WaitHandler(void);
+void DRV_RX_SyncHandler(void);
+void DRV_RX_IdleHandler(void);
+void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
 
-void DRV_TX_Send(uint8_t *Data, uint32_t DataLen);
+void DRV_TX_SetData(void);
+void DRV_TX_Preload(void);
+void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
 
-/* Interrupt handler function */
-void DRV_RX_TimerICCallback(void);
-void DRV_RX_TimerOCCallback(void);
-
-void DRV_TX_TimerOverflowCallback(void);
+/* Endpoints for API Calls */
+void DRV_API_Send(uint8_t *Data, uint32_t DataLen);
+// Specific APIs for timer interrupts
+void DRV_API_InputCaptureCallback(TIM_HandleTypeDef *htim);
+void DRV_API_OutputCompareCallback(TIM_HandleTypeDef *htim);
+void DRV_API_UpdateEventCallback(TIM_HandleTypeDef *htim);
 
 #endif //__DRV

@@ -101,21 +101,15 @@ void TIM3_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-  if (htim == DRV.RX.htim) {
-    DRV_RX_TimerICCallback();
-  }
+  DRV_API_InputCaptureCallback(htim);
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim == DRV.RX.htim) {
-    DRV_RX_TimerOCCallback();
-  }
+  DRV_API_OutputCompareCallback(htim);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim == DRV.TX.htim) {
-    DRV_TX_TimerOverflowCallback();
-  }
+  DRV_API_UpdateEventCallback(htim);
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

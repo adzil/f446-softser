@@ -14,9 +14,10 @@
 #define PHY_CC_MEMORY_COUNT (1 << (PHY_CC_DEPTH - 1))
 
 typedef enum {
+  PHY_RX_STATUS_RESET,
   PHY_RX_STATUS_IDLE,
-  PHY_RX_STATUS_ACTIVE,
-  PHY_RX_STATUS_BUSY
+  PHY_RX_STATUS_RCV_HEADER,
+  PHY_RX_STATUS_RCV_PAYLOAD
 } PHY_RX_StatusTypeDef;
 
 typedef struct {
@@ -62,5 +63,8 @@ uint8_t PHY_RX_DataInput(uint8_t Data);
 /* Thread specific definitions */
 extern osThreadId PHY_ThreadId;
 void PHY_Thread(const void *argument);
+
+/* APIs */
+uint8_t PHY_API_DataReceived(uint8_t Data);
 
 #endif // __PHY

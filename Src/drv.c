@@ -18,11 +18,6 @@ const uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
 const uint8_t DRV_TX_Visibility[] = {0xE2, 0xD4, 0xB1, 0x39};
 const uint8_t DRV_TX_Stop[] = {0xFF};
 
-/* Private function prototypes */
-void DRV_RX_WriteReset(void);
-void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
-void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
-
 /* Function declaration */
 // Driver initialization code and Status Register settings
 void DRV_Init(void) {
@@ -340,18 +335,6 @@ void DRV_TX_Preload(void) {
   }
 }
 
-// General purpose send function
-void DRV_TX_Send(uint8_t *Data, uint32_t DataLen) {
-  DRV.TX.Data = Data;
-
-  // Set the send pointer to data
-  DRV.TX.Send = Data;
-  // Set the send length
-  DRV.TX.SendLen = DataLen;
-  // Activate the transmission module
-  DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
-}
-
 // General purpose state machine set with some configurations
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
   if (Status == DRV_TX_STATUS_VISIBILITY) {
@@ -398,10 +381,25 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
   }
 }
 
-/* Interrupt callback */
+/* APIs Definition */
+// General purpose send function
+void DRV_API_Send(uint8_t *Data, uint32_t DataLen) {
+  DRV.TX.Data = Data;
+
+  // Set the send pointer to data
+  DRV.TX.Send = Data;
+  // Set the send length
+  DRV.TX.SendLen = DataLen;
+  // Activate the transmission module
+  DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
+}
+
 // Interrupt callback on Input Capture match
-void DRV_RX_TimerICCallback(void) {
-  TIM_TypeDef *TIM = DRV.RX.htim->Instance;
+void DRV_API_InputCaptureCallback(TIM_HandleTypeDef *htim) {
+  TIM_TypeDef *TIM = htim->Instance;
+
+  // Return on timer mismatch
+  if (htim != DRV.RX.htim) return;
 
   switch (DRV.RX.Status) {
     case DRV_RX_STATUS_IDLE:
@@ -425,7 +423,10 @@ void DRV_RX_TimerICCallback(void) {
 }
 
 // Interrupt callback on Output Compare match
-void DRV_RX_TimerOCCallback(void) {
+void DRV_API_OutputCompareCallback(TIM_HandleTypeDef *htim) {
+  // Return on timer mismatch
+  if (htim != DRV.RX.htim) return;
+
   switch (DRV.RX.Status) {
     case DRV_RX_STATUS_WAIT:
       DRV_RX_WaitHandler();
@@ -442,7 +443,10 @@ void DRV_RX_TimerOCCallback(void) {
 }
 
 // Interrupt callback on Overflow match
-void DRV_TX_TimerOverflowCallback(void) {
+void DRV_API_UpdateEventCallback(TIM_HandleTypeDef *htim) {
+  // Return on timer mismatch
+  if (htim != DRV.TX.htim) return;
+
   // Send the data
   if (DRV.TX.PreloadData & 0x80) {
     TIM4->CCR1 = 2210;
