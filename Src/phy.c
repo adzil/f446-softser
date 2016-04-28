@@ -15,6 +15,8 @@ osThreadId PHY_ThreadId;
 uint8_t PHY_CC_Output(uint8_t input);
 uint8_t PHY_CC_Popcnt(uint8_t input);
 
+uint8_t PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status);
+
 const uint8_t PHY_CC_OUTPUT_TABLE[] = {
     0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,0xc3,0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,
     0xc3,0x0f,0x0f,0xf0,0xf0,0xc3,0xc3,0x3c,0x3c,0x0f,0x0f,0xf0,0xf0,0xc3,0xc3,
@@ -132,7 +134,7 @@ void PHY_RX_DataReset(void) {
   PHY.RX.Length = 0;
 }
 
-uint8_t PHY_RX_DataHandler(uint8_t Data) {
+uint8_t PHY_RX_DataInput(uint8_t Data) {
   uint8_t *Buffer;
 
   if (PHY.RX.Length && PHY.RX.WriteCount > PHY.RX.Length) return 1;
@@ -143,17 +145,28 @@ uint8_t PHY_RX_DataHandler(uint8_t Data) {
   return 0;
 }
 
-uint8_t PHY_RX_Read(uint8_t *Data) {
+uint8_t PHY_RX_DataOutput(uint8_t *Data) {
   uint8_t *Buffer;
 
-  if (PHY.RX.Length && PHY.RX.ReadCount > PHY.RX.Length) return 1;
+  if (PHY.RX.Length && PHY.RX.ReadCount > PHY.RX.Length) {
+    PHY_RX_SetStatus(PHY_RX_STATUS_BUSY);
+    return 0;
+  }
   Buffer = BUF_Read(&PHY.RX.Buffer);
-  if (!Buffer) return 1;
+  if (!Buffer) return 0;
   *Data = *Buffer;
-  PHY.RX.ReadCount++;
-  return 0;
+  PHY.RX.WriteCount++;
+  return 1;
+}
+
+uint8_t PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
+  PHY.RX.Status = Status;
 }
 
 void PHY_Thread(const void *argument) {
+  uint8_t Data;
 
+  while(1) {
+    if (P)
+  }
 }

@@ -13,6 +13,12 @@
 #define PHY_CC_DEPTH 7
 #define PHY_CC_MEMORY_COUNT (1 << (PHY_CC_DEPTH - 1))
 
+typedef enum {
+  PHY_RX_STATUS_IDLE,
+  PHY_RX_STATUS_ACTIVE,
+  PHY_RX_STATUS_BUSY
+} PHY_RX_StatusTypeDef;
+
 typedef struct {
   uint16_t *Distance;
   uint16_t *LastDistance;
@@ -31,6 +37,7 @@ typedef struct {
   uint16_t WriteCount;
   uint16_t ReadCount;
   uint16_t Length;
+  PHY_RX_StatusTypeDef Status;
 } PHY_RX_HandleTypeDef;
 
 typedef struct {
@@ -50,7 +57,7 @@ extern PHY_HandleTypeDef PHY;
 void PHY_Init(void);
 
 void PHY_RX_DataReset(void);
-uint8_t PHY_RX_DataHandler(uint8_t Data);
+uint8_t PHY_RX_DataInput(uint8_t Data);
 
 /* Thread specific definitions */
 extern osThreadId PHY_ThreadId;

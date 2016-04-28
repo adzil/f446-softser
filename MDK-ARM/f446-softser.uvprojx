@@ -556,6 +556,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\buffer.c</FilePath>
             </File>
+            <File>
+              <FileName>thread.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\thread.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1122,6 +1127,11 @@
               <FileName>buffer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\buffer.c</FilePath>
+            </File>
+            <File>
+              <FileName>thread.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\thread.c</FilePath>
             </File>
           </Files>
         </Group>
