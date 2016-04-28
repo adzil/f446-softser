@@ -7,6 +7,8 @@ static uint8_t *MEM_MD_Head;
 static uint8_t *MEM_LG_Head;
 static uint8_t *MEM_XL_Head;
 
+static volatile uint8_t MEM_Lock;
+
 static void mem_init_stn(int count, int size, uint8_t **head) {
   static uint8_t *ptr = MEM_Heap;
   int i;
@@ -48,6 +50,9 @@ void *MEM_Alloc(int size) {
     return NULL;
   }
 
+  // Lock the memory operation
+  LOCK_Start(&MEM_Lock);
+
   // Checks for memory pool availability
   if (*head) {
     // Change current pointer to the head
@@ -57,11 +62,16 @@ void *MEM_Alloc(int size) {
     // Tag the reserved memory with the apropriate head address
     *((uint8_t ***) ptr) = head;
     // Return the reserved memory address
-    return ptr + PTR_SIZE;
+    ptr += PTR_SIZE;
   } else {
     // No memory can be reserved at this moment
-    return NULL;
+    ptr = NULL;
   }
+
+  // Unlock the memory operation
+  LOCK_End(&MEM_Lock);
+
+  return ptr;
 }
 
 void MEM_Free(void *inptr) {
@@ -78,10 +88,14 @@ void MEM_Free(void *inptr) {
     // Checks if the address belongs to the memory pool
     if (head == &MEM_SM_Head || head == &MEM_MD_Head ||
         head == &MEM_LG_Head || head == &MEM_XL_Head) {
+      // Lock the memory operation
+      LOCK_Start(&MEM_Lock);
       // Move the next pointer to the freed memory
       *((uint8_t **)ptr) = *head;
       // Move the head pointer
       *head = ptr;
+      // Unlock the memory operation
+      LOCK_End(&MEM_Lock);
     }
   }
 }
