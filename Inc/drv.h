@@ -33,7 +33,8 @@ typedef enum {
   DRV_RX_STATUS_IDLE,
   DRV_RX_STATUS_SYNC,
   DRV_RX_STATUS_WAIT,
-  DRV_RX_STATUS_ACTIVE
+  DRV_RX_STATUS_ACTIVE,
+  DRV_RX_STATUS_BUSY
 } DRV_RX_StatusTypeDef;
 
 typedef enum {

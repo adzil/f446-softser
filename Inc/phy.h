@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 #include "buffer.h"
+#include "cmsis_os.h"
 
 #define PHY_BUFFER_SIZE 2048
 #define PHY_CC_DEPTH 7
@@ -48,8 +49,11 @@ extern PHY_HandleTypeDef PHY;
 
 void PHY_Init(void);
 
-void PHY_RX_Reset(void);
-uint8_t PHY_RX_Write(uint8_t Data);
-uint8_t PHY_RX_Read(uint8_t *Data);
+void PHY_RX_DataReset(void);
+uint8_t PHY_RX_DataHandler(uint8_t Data);
+
+/* Thread specific definitions */
+extern osThreadId PHY_ThreadId;
+void PHY_Thread(const void *argument);
 
 #endif // __PHY

@@ -8,6 +8,9 @@ uint32_t PHY_CC_LastData_MEM[PHY_CC_MEMORY_COUNT];
 
 uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
 
+/* OS Thread Handle */
+osThreadId PHY_ThreadId;
+
 /* Function prototypes */
 uint8_t PHY_CC_Output(uint8_t input);
 uint8_t PHY_CC_Popcnt(uint8_t input);
@@ -122,14 +125,14 @@ void PHY_CC_DecodeInput(uint8_t Input) {
   PHY.CC.Data = (uint32_t *) TempPtr;
 }
 
-void PHY_RX_Reset(void) {
+void PHY_RX_DataReset(void) {
   BUF_Flush(&PHY.RX.Buffer);
   PHY.RX.WriteCount = 0;
   PHY.RX.ReadCount = 0;
   PHY.RX.Length = 0;
 }
 
-uint8_t PHY_RX_Write(uint8_t Data) {
+uint8_t PHY_RX_DataHandler(uint8_t Data) {
   uint8_t *Buffer;
 
   if (PHY.RX.Length && PHY.RX.WriteCount > PHY.RX.Length) return 1;
@@ -149,4 +152,8 @@ uint8_t PHY_RX_Read(uint8_t *Data) {
   *Data = *Buffer;
   PHY.RX.ReadCount++;
   return 0;
+}
+
+void PHY_Thread(const void *argument) {
+
 }

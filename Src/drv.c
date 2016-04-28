@@ -37,6 +37,11 @@ void DRV_Init(void) {
   DRV.TX.SR.RLL = 1;
   DRV.TX.SR.Visibility = 1;
   DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
+
+  // Initialize IR output
+  TIM4->CCR1 = 2210;
+  HAL_TIM_Base_Init(&htim4);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 }
 
 // Start RX module
@@ -62,7 +67,7 @@ inline void DRV_RX_WriteReset(void) {
 }
 
 // Write new data to the RX FIFO buffer and TDP detection
-void DRV_RX_Active(void) {
+void DRV_RX_ActiveHandler(void) {
   uint8_t Data;
   uint8_t InputBit;
 
@@ -79,14 +84,14 @@ void DRV_RX_Active(void) {
     DRV_RX_WriteReset();
     // Extract the actual 8 bit data
     Data = DRV.RX.DataBit & 0xff;
-    if (Data == 0xff || PHY_RX_Write(Data)) {
-      // End receiving message
-      DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
+    if (Data == 0xff || PHY_RX_DataHandler(Data)) {
+      // Process incoming message delay
+      DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
     }
   }
 }
 
-void DRV_RX_Wait(void) {
+void DRV_RX_WaitHandler(void) {
   uint8_t InputBit;
 
   InputBit = __GPIO_READ(GPIOA, 1);
@@ -107,7 +112,7 @@ void DRV_RX_Wait(void) {
 }
 
 // Staged synchronization with FLP clocks
-void DRV_RX_Sync(void) {
+void DRV_RX_SyncHandler(void) {
   TIM_TypeDef *TIM = DRV.RX.htim->Instance;
   uint32_t NewPeriod;
 
@@ -136,7 +141,7 @@ void DRV_RX_Sync(void) {
 }
 
 // Idle status interrupt callbacks
-void DRV_RX_Idle(void) {
+void DRV_RX_IdleHandler(void) {
   TIM_TypeDef *TIM = DRV.RX.htim->Instance;
   uint32_t NewPeriod;
 
@@ -187,6 +192,14 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
       default:
         return;
     }
+  } else if (Status == DRV_RX_STATUS_BUSY) {
+    switch (DRV.RX.Status) {
+      case DRV_RX_STATUS_ACTIVE:
+        break;
+
+      default:
+        return;
+    }
   }
 
   // Set new status
@@ -195,6 +208,7 @@ void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status) {
   // New status configuration
   switch (DRV.RX.Status) {
     case DRV_RX_STATUS_RESET:
+    case DRV_RX_STATUS_BUSY:
       // Reset state, disable all RX Timers
       HAL_TIM_OC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_1);
       HAL_TIM_IC_Stop_IT(DRV.RX.htim, TIM_CHANNEL_2);
@@ -391,11 +405,11 @@ void DRV_RX_TimerICCallback(void) {
 
   switch (DRV.RX.Status) {
     case DRV_RX_STATUS_IDLE:
-      DRV_RX_Idle();
+      DRV_RX_IdleHandler();
       break;
 
     case DRV_RX_STATUS_SYNC:
-      DRV_RX_Sync();
+      DRV_RX_SyncHandler();
       break;
 
     case DRV_RX_STATUS_WAIT:
@@ -414,11 +428,11 @@ void DRV_RX_TimerICCallback(void) {
 void DRV_RX_TimerOCCallback(void) {
   switch (DRV.RX.Status) {
     case DRV_RX_STATUS_WAIT:
-      DRV_RX_Wait();
+      DRV_RX_WaitHandler();
       break;
 
     case DRV_RX_STATUS_ACTIVE:
-      DRV_RX_Active();
+      DRV_RX_ActiveHandler();
       break;
 
     default:

@@ -42,6 +42,7 @@
 #include "cmsis_os.h"
 #include "macros.h"
 #include "drv.h"
+#include "thread.h"
 #include "memory.h"
 #include "phy.h"
 #include "stm32f4xx.h"
@@ -149,22 +150,22 @@ int main(void)
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
   // Initialize Optical Driver
   DRV_Init();
-  DRV_RX_Start();
   // Initialize Memory
   MEM_Init();
   // Initialize PHY layer
   PHY_Init();
-  // Initialize PB6/TIM4CH1 for 38kHz IR modulation
-  TIM4->CCR1 = 2210;
-  HAL_TIM_Base_Init(&htim4);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
   //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
+  // Initialize from thread module
+  THR_Init();
   // Start thread execution
   osKernelStart();
+
+  // Run codes
+  DRV_RX_Start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
