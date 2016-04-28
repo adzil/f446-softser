@@ -137,7 +137,7 @@ void PHY_RX_DataReset(void) {
 uint8_t PHY_RX_DataInput(uint8_t Data) {
   uint8_t *Buffer;
 
-  if (PHY.RX.Length && PHY.RX.WriteCount > PHY.RX.Length) return 1;
+  if (PHY.RX.Length && PHY.RX.WriteCount >= PHY.RX.Length) return 1;
   Buffer = BUF_Write(&PHY.RX.Buffer);
   if (!Buffer) return 1;
   *Buffer = Data;
@@ -148,7 +148,7 @@ uint8_t PHY_RX_DataInput(uint8_t Data) {
 uint8_t PHY_RX_DataOutput(uint8_t *Data) {
   uint8_t *Buffer;
 
-  if (PHY.RX.Length && PHY.RX.ReadCount > PHY.RX.Length) {
+  if (PHY.RX.Length && PHY.RX.ReadCount >= PHY.RX.Length) {
     PHY_RX_SetStatus(PHY_RX_STATUS_BUSY);
     return 0;
   }
@@ -164,9 +164,5 @@ uint8_t PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
 }
 
 void PHY_Thread(const void *argument) {
-  uint8_t Data;
-
-  while(1) {
-    if (P)
-  }
+  // Main thread here
 }
