@@ -55,7 +55,7 @@
 osThreadId tid_blinkLED;
 //osThreadId tid_sendSerial;
 osThreadId tid_checkButton;
-char Buf[512];
+char Buf[1024];
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
@@ -111,7 +111,7 @@ void blinkLED(void const *argument) {
 void checkButton(void const *argument) {
   while (1) {
     if (!__GPIO_READ(GPIOC, 13)) {
-      DRV_API_SendStart(TXData, sizeof(TXData));
+      PHY_API_SendStart(TXData, sizeof(TXData));
       osDelay(200);
     }
   }
@@ -145,9 +145,11 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
+#ifdef  USE_FULL_ASSERT
   // Board - Serial identification
-  sprintf(Buf, "NUCLEO-F446 Board -- UART2 115200 Baud.\r\n");
+  sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication Project\r\n---\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
+#endif
   // Initialize Optical Driver
   DRV_Init();
   // Initialize Memory
@@ -173,6 +175,11 @@ int main(void)
   while (1) {
     osDelay(500);
     osSignalSet(tid_blinkLED, 0x0001);
+
+#ifdef  USE_FULL_ASSERT
+    // Check for os
+    assert_user((osKernelRunning()), "RTX Kernel is not running.");
+#endif
   }
   /* USER CODE END WHILE */
 
@@ -234,8 +241,10 @@ void SystemClock_Config(void)
    * @param line: assert_param error line source number
    * @retval None
    */
-void assert_failed(uint8_t* file, uint32_t line)
+void assert_failed(uint8_t* file, uint32_t line, const char *msg)
 {
+  sprintf(Buf, "(%s:%d) %s\r\n", file, line, msg);
+  HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xff);
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

@@ -53,19 +53,20 @@ void *MEM_Alloc(int size) {
   // Lock the memory operation
   LOCK_Start(&MEM_Lock);
 
+  // Change current pointer to the head
+  ptr = *head;
+#ifdef USE_FULL_ASSERT
+  // Check for memory exhaustion
+  assert_user((ptr), "Memory pool exhaustion");
+#endif
   // Checks for memory pool availability
-  if (*head) {
-    // Change current pointer to the head
-    ptr = *head;
+  if (ptr) {
     // Change the head pointer to the next free pointer
     *head = *((uint8_t **) ptr);
     // Tag the reserved memory with the apropriate head address
     *((uint8_t ***) ptr) = head;
     // Return the reserved memory address
     ptr += PTR_SIZE;
-  } else {
-    // No memory can be reserved at this moment
-    ptr = NULL;
   }
 
   // Unlock the memory operation

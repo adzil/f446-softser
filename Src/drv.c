@@ -51,7 +51,7 @@ void DRV_RX_Stop(void) {
 
 // Reset write state (typically when transitioning from WAIT to ACTIVE)
 // and bit reset after data counter expires
-inline void DRV_RX_WriteReset(void) {
+_inline_ void DRV_RX_WriteReset(void) {
   if (DRV.RX.SR.RLL) {
     // Multiply data count by 2 if using the RLL code
     DRV.RX.DataCount = DRV_RX_DATA_COUNT * 2;
@@ -453,9 +453,9 @@ void DRV_API_UpdateEventCallback(TIM_HandleTypeDef *htim) {
   }
   // Modify the preload data register
   if (--DRV.TX.PreloadDataLen) {
-    if (DRV.TX.SR.RLL && (DRV.TX.PreloadDataLen & 1)) {
-      if (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
-          DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD) {
+    if (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
+        DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD) {
+      if (DRV.TX.SR.RLL && (DRV.TX.PreloadDataLen & 1)) {
         // Generate Manchester RLL data
         DRV.TX.PreloadData ^= 0x80;
       } else {

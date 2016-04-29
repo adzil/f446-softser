@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stddef.h>
+#include <macros.h>
 
 typedef struct {
   uint8_t *Buffer;
@@ -12,19 +13,16 @@ typedef struct {
   uint16_t Length;
 }BUF_HandleTypeDef;
 
+/* Inline functions */
+_inline_ uint16_t BUF_Next (BUF_HandleTypeDef *Handle ,uint16_t Current) {
+  return (Current + Handle->Size) % Handle->Length;
+}
+
+uint16_t BUF_Next(BUF_HandleTypeDef *Handle ,uint16_t Current);
 void BUF_Init(BUF_HandleTypeDef *Handle, uint8_t *Buffer, uint16_t Size,
               uint16_t Length);
 void *BUF_Write(BUF_HandleTypeDef *Handle);
 void *BUF_Read(BUF_HandleTypeDef *Handle);
 void BUF_Flush(BUF_HandleTypeDef *Handle);
-
-/* Inline functions */
-inline uint16_t BUF_Next(BUF_HandleTypeDef *Handle ,uint16_t Current) {
-  return (Current + Handle->Size) % Handle->Length;
-}
-
-#define BUF_ReadAvail(Handle) ((Handle->Start == Handle->End) ? 0 : 1)
-#define BUF_WriteNext(Handle) BUF_Next(Handle, Handle->End)
-#define BUF_WriteAvail(Handle) ((BUF_WriteNext(Handle) == Handle->End) ? 0 : 1)
 
 #endif //__BUFFER

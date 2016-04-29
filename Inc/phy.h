@@ -11,6 +11,8 @@
 #include "cmsis_os.h"
 #include "lock.h"
 #include "drv.h"
+#include "usart.h"
+#include "macros.h"
 
 #define PHY_BUFFER_SIZE 2048
 #define PHY_CC_DEPTH 7
@@ -74,7 +76,7 @@ typedef struct {
 void PHY_Init(void);
 
 void PHY_Activate(void);
-
+void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status);
 void PHY_TX_SetStatus(PHY_TX_StatusTypeDef Status);
 
 /* Thread specific definitions */

@@ -1,5 +1,4 @@
 #include <phy.h>
-#include <drv.h>
 
 PHY_HandleTypeDef PHY;
 uint16_t PHY_CC_Distance_MEM[PHY_CC_MEMORY_LENGTH];
@@ -12,12 +11,6 @@ uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
 /* OS Thread Handle */
 osThreadId PHY_ThreadId;
 
-/* Function prototypes */
-uint8_t PHY_CC_Output(uint8_t input);
-uint8_t PHY_CC_Popcnt(uint8_t input);
-
-uint8_t PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status);
-
 const uint8_t PHY_CC_OUTPUT_TABLE[] = {
     0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,0xc3,0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,
     0xc3,0x0f,0x0f,0xf0,0xf0,0xc3,0xc3,0x3c,0x3c,0x0f,0x0f,0xf0,0xf0,0xc3,0xc3,
@@ -26,13 +19,13 @@ const uint8_t PHY_CC_OUTPUT_TABLE[] = {
     0x3c,0x3c,0xc3,0xc3
 };
 
-inline uint8_t PHY_CC_Output(uint8_t input) {
+_inline_ uint8_t PHY_CC_Output(uint8_t input) {
   return (input & PHY_CC_MEMORY_LENGTH) ?
          PHY_CC_OUTPUT_TABLE[input & (PHY_CC_MEMORY_LENGTH - 1)] >> 4 :
          PHY_CC_OUTPUT_TABLE[input] & 0xf;
 }
 
-inline uint8_t PHY_CC_Popcnt(uint8_t input) {
+_inline_ uint8_t PHY_CC_Popcnt(uint8_t input) {
   input = (input & 0x5) + ((input >> 1) & 0x5);
   input = (input & 0x3) + ((input >> 2) & 0x3);
 
@@ -134,23 +127,6 @@ void PHY_CC_DecodeInput(uint8_t Input) {
 }
 */
 
-uint8_t PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
-  PHY.RX.Status = Status;
-
-  switch (PHY.RX.Status) {
-    case PHY_RX_STATUS_RESET:
-      BUF_Flush(&PHY.RX.Buffer);
-      PHY.RX.ReceiveLength = 0;
-      LOCK_WriteH(0, &PHY.RX.Length);
-      DRV_API_ReceiveComplete();
-      break;
-
-    default:
-      // Keep compiler happy :)
-      break;
-  }
-}
-
 // Receiver handler
 void PHY_RX_Handler(void) {
   uint8_t *Buffer;
@@ -172,12 +148,15 @@ void PHY_RX_Handler(void) {
 
     PHY_RX_SetStatus(PHY_RX_STATUS_PROC_HEADER);
   }
+  
+  // Write to the new buffer
+  *PHY.RX.WriteBufferData++ = *Buffer;
 
   // Next state decisions
   if (!--PHY.RX.WriteBufferLength) {
     switch (PHY.RX.Status) {
       case PHY_RX_STATUS_PROC_HEADER:
-        Length = __REV16(*PHY.RX.WriteBuffer);
+        Length = __REV16(*((uint16_t *)PHY.RX.WriteBuffer));
         MEM_Free(PHY.RX.WriteBuffer);
         PHY.RX.WriteBuffer = MEM_Alloc(Length);
         if (!PHY.RX.WriteBuffer) {
@@ -186,13 +165,13 @@ void PHY_RX_Handler(void) {
         }
         PHY.RX.WriteBufferData = PHY.RX.WriteBuffer;
         PHY.RX.WriteBufferLength = Length;
-        Length += PHY_HEADER_LENGTH;
-        LOCK_WriteH(Length, &PHY.RX.Length);
+        PHY.RX.Length = Length + PHY_HEADER_LENGTH;
 
         PHY_RX_SetStatus(PHY_RX_STATUS_PROC_PAYLOAD);
         break;
 
       case PHY_RX_STATUS_PROC_PAYLOAD:
+        HAL_UART_Transmit(&huart2, PHY.RX.WriteBuffer, 10, 0xff);
         MEM_Free(PHY.RX.WriteBuffer);
 
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
@@ -205,9 +184,27 @@ void PHY_RX_Handler(void) {
   }
 }
 
+void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
+  PHY.RX.Status = Status;
+
+  switch (PHY.RX.Status) {
+    case PHY_RX_STATUS_RESET:
+      BUF_Flush(&PHY.RX.Buffer);
+      PHY.RX.ReceiveLength = 0;
+      PHY.RX.Length = 0;
+      DRV_API_ReceiveComplete();
+      break;
+
+    default:
+      // Keep compiler happy :)
+      break;
+  }
+}
+
 void PHY_SR_Handler(void) {
   if (PHY.TX.SR.TXComplete) {
     // Free TX data memory
+    MEM_Free(PHY.TX.Header);
     MEM_Free(PHY.TX.Payload);
     // Set back TX status
     PHY_TX_SetStatus(PHY_TX_STATUS_RESET);
@@ -222,7 +219,7 @@ void PHY_TX_SetStatus(PHY_TX_StatusTypeDef Status) {
 
 uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
   // Check if there is ongoing send process
-  if (PHY.TX.Status != PHY_TX_STATUS_RESET) return 0;
+  if (PHY.TX.Status != PHY_TX_STATUS_RESET) return 1;
 
   PHY_TX_SetStatus(PHY_TX_STATUS_ACTIVE);
 
@@ -230,11 +227,12 @@ uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
   if (!PHY.TX.Header) {
     MEM_Free(Data);
     PHY_TX_SetStatus(PHY_TX_STATUS_RESET);
-    return 0;
+    return 1;
   }
-  *PHY.TX.Header = __REV16(DataLen);
+  *((uint16_t *)PHY.TX.Header) = __REV16(DataLen);
   PHY.TX.Payload = Data;
-  DRV_API_SendStart(PHY.TX.Payload, PHY_HEADER_LENGTH, Data, DataLen);
+  DRV_API_SendStart(PHY.TX.Header, PHY_HEADER_LENGTH, Data, DataLen);
+  return 0;
 }
 
 void PHY_API_SendComplete(void) {
@@ -244,11 +242,8 @@ void PHY_API_SendComplete(void) {
 
 uint8_t PHY_API_DataReceived(uint8_t Data) {
   uint8_t *Buffer;
-  uint16_t Length;
 
-  Length = LOCK_ReadH(&PHY.RX.Length);
-
-  if (Length && PHY.RX.ReceiveLength >= Length) return 1;
+  if (PHY.RX.Length && PHY.RX.ReceiveLength >= PHY.RX.Length) return 1;
   Buffer = BUF_Write(&PHY.RX.Buffer);
   if (!Buffer) return 1;
   *Buffer = Data;
