@@ -71,17 +71,25 @@ typedef struct {
   PHY_TX_HandleTypeDef TX;
 } PHY_HandleTypeDef;
 
+typedef struct {
+  uint32_t PsduLength;
+  uint8_t *Psdu;
+} PHY_DataTypeDef;
+
 //extern PHY_HandleTypeDef PHY;
 
 void PHY_Init(void);
 
-void PHY_Activate(void);
+void PHY_RX_Activate(void);
+void PHY_TX_Activate(void);
 void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status);
 void PHY_TX_SetStatus(PHY_TX_StatusTypeDef Status);
 
 /* Thread specific definitions */
-extern osThreadId PHY_ThreadId;
-void PHY_Thread(const void *argument);
+extern osThreadId PHY_RX_ThreadId;
+extern osThreadId PHY_TX_ThreadId;
+void PHY_RX_Thread(const void *argument);
+void PHY_TX_Thread(const void *argument);
 
 /* APIs */
 uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen);
