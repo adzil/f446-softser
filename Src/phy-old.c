@@ -9,7 +9,8 @@ uint32_t PHY_CC_LastData_MEM[PHY_CC_MEMORY_LENGTH];
 uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
 
 /* OS Thread Handle */
-osThreadId PHY_ThreadId;
+osThreadId PHY_RX_ThreadId;
+osThreadId PHY_TX_ThreadId;
 
 const uint8_t PHY_CC_OUTPUT_TABLE[] = {
     0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,0xc3,0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,
@@ -41,9 +42,14 @@ void PHY_Init(void) {
   BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
 }
 
-void PHY_Activate(void) {
+void PHY_RX_Activate(void) {
   // Set signal to activate thread
-  osSignalSet(PHY_ThreadId, 0x01);
+  osSignalSet(PHY_RX_ThreadId, 0x01);
+}
+
+void PHY_TX_Activate(void) {
+  // Set signal to activate thread
+  osSignalSet(PHY_TX_ThreadId, 0x01);
 }
 /*
 void PHY_CC_EncodeReset(void) {
@@ -238,7 +244,7 @@ uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
 
 void PHY_API_SendComplete(void) {
   PHY.TX.SR.TXComplete = 1;
-  PHY_Activate();
+  PHY_TX_Activate();
 }
 
 uint8_t PHY_API_DataReceived(uint8_t Data) {
@@ -249,15 +255,16 @@ uint8_t PHY_API_DataReceived(uint8_t Data) {
   if (!Buffer) return 1;
   *Buffer = Data;
   PHY.RX.ReceiveLength++;
-  PHY_Activate();
+  PHY_RX_Activate();
   return 0;
 }
 
-void PHY_Thread(const void *argument) {
+void PHY_RX_Thread(const void *argument) {
   // Endless loop
   while (1) {
     // Wait for activation if RX is sleeping
-    if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
+    if (PHY.RX.Status == PHY_RX_STATUS_RESET &&
+        PHY.TX.Status == PHY_TX_STATUS_RESET) {
       osSignalWait(0x01, osWaitForever);
     }
     // PHY Data handler
