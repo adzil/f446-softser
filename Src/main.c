@@ -111,7 +111,7 @@ void blinkLED(void const *argument) {
 void checkButton(void const *argument) {
   while (1) {
     if (!__GPIO_READ(GPIOC, 13)) {
-      PHY_API_SendStart(TXData, sizeof(TXData));
+      PHY_API_SendStart(TXData, sizeof(TXData) - 1);
       osDelay(200);
     }
   }

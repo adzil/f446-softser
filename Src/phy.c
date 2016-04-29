@@ -171,7 +171,8 @@ void PHY_RX_Handler(void) {
         break;
 
       case PHY_RX_STATUS_PROC_PAYLOAD:
-        HAL_UART_Transmit(&huart2, PHY.RX.WriteBuffer, 10, 0xff);
+        HAL_UART_Transmit(&huart2, PHY.RX.WriteBuffer,
+                          PHY.RX.Length - PHY_HEADER_LENGTH, 0xff);
         MEM_Free(PHY.RX.WriteBuffer);
 
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);

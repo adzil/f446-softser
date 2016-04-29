@@ -33,20 +33,20 @@
     <orderEntry type="module-library">
       <library name="Header Search Paths">
         <CLASSES>
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include-fixed" />
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include" />
+          <root url="file://C:/MinGW/include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
           <root url="file://C:/Keil_v5/ARM/Pack/Keil/STM32F4xx_DFP/2.7.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include-fixed" />
-          <root url="file://C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include" />
         </CLASSES>
         <SOURCES>
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include-fixed" />
+          <root url="file://C:/MinGW/lib/gcc/mingw32/4.9.3/include" />
+          <root url="file://C:/MinGW/include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
           <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
           <root url="file://C:/Keil_v5/ARM/Pack/Keil/STM32F4xx_DFP/2.7.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" />
-          <root url="file://C:/cygwin64/lib/gcc/x86_64-w64-mingw32/4.9.2/include-fixed" />
-          <root url="file://C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include" />
         </SOURCES>
       </library>
     </orderEntry>
