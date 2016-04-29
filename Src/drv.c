@@ -79,7 +79,7 @@ void DRV_RX_ActiveHandler(void) {
     DRV_RX_WriteReset();
     // Extract the actual 8 bit data
     Data = DRV.RX.DataBit & 0xff;
-    if (Data == 0xff || PHY_RX_DataInput(Data)) {
+    if (Data == 0xff || PHY_API_DataReceived(Data)) {
       // Process incoming message delay
       DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
     }
@@ -275,9 +275,14 @@ void DRV_TX_SetData(void) {
       DRV.TX.DataLen = sizeof(DRV_TX_StartBit);
       break;
 
-    case DRV_TX_STATUS_ACTIVE:
-      DRV.TX.Data = DRV.TX.Send;
-      DRV.TX.DataLen = DRV.TX.SendLen;
+    case DRV_TX_STATUS_SND_HEADER:
+      DRV.TX.Data = DRV.TX.Header;
+      DRV.TX.DataLen = DRV.TX.HeaderLen;
+      break;
+
+    case DRV_TX_STATUS_SND_PAYLOAD:
+      DRV.TX.Data = DRV.TX.Payload;
+      DRV.TX.DataLen = DRV.TX.PayloadLen;
       break;
 
     case DRV_TX_STATUS_STOP:
@@ -303,10 +308,17 @@ void DRV_TX_Preload(void) {
         break;
 
       case DRV_TX_STATUS_SYNC:
-        DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
+        DRV_TX_SetStatus(DRV_TX_STATUS_SND_HEADER);
         break;
 
-      case DRV_TX_STATUS_ACTIVE:
+      case DRV_TX_STATUS_SND_HEADER:
+        DRV_TX_SetStatus(DRV_TX_STATUS_SND_PAYLOAD);
+        break;
+
+      case DRV_TX_STATUS_SND_PAYLOAD:
+        // Tell PHY that send action is complete
+        PHY_API_SendComplete();
+        // Change to new state
         if (DRV.TX.SR.Visibility) {
           DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
         } else {
@@ -330,34 +342,14 @@ void DRV_TX_Preload(void) {
   DRV.TX.PreloadData = *(DRV.TX.Data++);
   DRV.TX.PreloadDataLen = DRV_TX_PRELOAD_COUNT;
   // Double the preload count on RLL
-  if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
+  if (DRV.TX.SR.RLL && (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
+                       DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD)) {
     DRV.TX.PreloadDataLen *= 2;
   }
 }
 
 // General purpose state machine set with some configurations
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
-  if (Status == DRV_TX_STATUS_VISIBILITY) {
-    if (!DRV.TX.SR.Visibility) return;
-  } else if (Status == DRV_TX_STATUS_ACTIVE) {
-    switch (DRV.TX.Status) {
-      case DRV_TX_STATUS_SYNC:
-        break;
-
-      default:
-        return;
-    }
-    if (!DRV.TX.Send || !DRV.TX.SendLen) return;
-  } else if  (Status == DRV_TX_STATUS_STOP) {
-    switch (DRV.TX.Status) {
-      case DRV_TX_STATUS_ACTIVE:
-        break;
-
-      default:
-        return;
-    }
-  }
-
   // Set the new status
   DRV.TX.Status = Status;
   // Set the data
@@ -382,14 +374,18 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
 }
 
 /* APIs Definition */
-// General purpose send function
-void DRV_API_Send(uint8_t *Data, uint32_t DataLen) {
-  DRV.TX.Data = Data;
+// Receive complete acknowledgement from PHY
+void DRV_API_ReceiveComplete(void) {
+  DRV_RX_SetStatus(DRV_RX_STATUS_IDLE);
+}
 
-  // Set the send pointer to data
-  DRV.TX.Send = Data;
-  // Set the send length
-  DRV.TX.SendLen = DataLen;
+// General purpose send function
+void DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
+                       uint16_t PayloadLen) {
+  DRV.TX.Header = Header;
+  DRV.TX.HeaderLen = HeaderLen;
+  DRV.TX.Payload = Payload;
+  DRV.TX.PayloadLen = PayloadLen;
   // Activate the transmission module
   DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
 }
@@ -457,10 +453,15 @@ void DRV_API_UpdateEventCallback(TIM_HandleTypeDef *htim) {
   }
   // Modify the preload data register
   if (--DRV.TX.PreloadDataLen) {
-    if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE && 
-        (DRV.TX.PreloadDataLen & 1)) {
-      // Generate Manchester RLL data
-      DRV.TX.PreloadData ^= 0x80;
+    if (DRV.TX.SR.RLL && (DRV.TX.PreloadDataLen & 1)) {
+      if (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
+          DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD) {
+        // Generate Manchester RLL data
+        DRV.TX.PreloadData ^= 0x80;
+      } else {
+        // Shift the preload data
+        DRV.TX.PreloadData <<= 1;
+      }
     } else {
       // Shift the preload data
       DRV.TX.PreloadData <<= 1;

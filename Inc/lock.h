@@ -7,7 +7,33 @@
 
 #include <stm32f4xx.h>
 
-inline void LOCK_Start(volatile uint8_t *Lock) {
+typedef volatile uint8_t LOCK_Handle;
+
+static inline uint8_t LOCK_ReadB(uint8_t *Address) {
+  return __LDREXB(Address);
+}
+
+static inline uint16_t LOCK_ReadH(uint16_t *Address) {
+  return __LDREXH(Address);
+}
+
+static inline uint32_t LOCK_ReadW(uint32_t *Address) {
+  return __LDREXW(Address);
+}
+
+static inline void LOCK_WriteB(uint8_t Data, uint8_t *Address) {
+  while(__STREXB(Data, Address));
+}
+
+static inline void LOCK_WriteH(uint16_t Data, uint16_t *Address) {
+  while(__STREXH(Data, Address));
+}
+
+static inline void LOCK_WriteW(uint32_t Data, uint32_t *Address) {
+  while(__STREXW(Data, Address));
+}
+
+static inline void LOCK_Start(LOCK_Handle *Lock) {
   uint8_t Status = 0;
 
   do {
@@ -20,7 +46,7 @@ inline void LOCK_Start(volatile uint8_t *Lock) {
   __DMB();
 }
 
-inline void LOCK_End(volatile uint8_t *Lock) {
+static inline void LOCK_End(LOCK_Handle *Lock) {
   // Call memory barrier
   __DMB();
   // Release lock

@@ -1,13 +1,6 @@
 #include <buffer.h>
 
 /* Private function prototypes */
-uint16_t BUF_Next(BUF_HandleTypeDef *Handle ,uint16_t Current);
-
-/* Inline functions */
-inline uint16_t BUF_Next(BUF_HandleTypeDef *Handle ,uint16_t Current) {
-  return (Current + Handle->Size) % Handle->Length;
-}
-
 void BUF_Init(BUF_HandleTypeDef *Handle, uint8_t *Buffer, uint16_t Size,
               uint16_t Length) {
   Handle->Buffer = Buffer;

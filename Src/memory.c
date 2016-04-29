@@ -7,7 +7,7 @@ static uint8_t *MEM_MD_Head;
 static uint8_t *MEM_LG_Head;
 static uint8_t *MEM_XL_Head;
 
-static volatile uint8_t MEM_Lock;
+static LOCK_Handle MEM_Lock;
 
 static void mem_init_stn(int count, int size, uint8_t **head) {
   static uint8_t *ptr = MEM_Heap;

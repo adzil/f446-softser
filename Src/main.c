@@ -111,7 +111,7 @@ void blinkLED(void const *argument) {
 void checkButton(void const *argument) {
   while (1) {
     if (!__GPIO_READ(GPIOC, 13)) {
-      DRV_API_Send(TXData, sizeof(TXData));
+      DRV_API_SendStart(TXData, sizeof(TXData));
       osDelay(200);
     }
   }

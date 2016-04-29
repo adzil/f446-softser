@@ -41,7 +41,8 @@ typedef enum {
   DRV_TX_STATUS_RESET,
   DRV_TX_STATUS_VISIBILITY,
   DRV_TX_STATUS_SYNC,
-  DRV_TX_STATUS_ACTIVE,
+  DRV_TX_STATUS_SND_HEADER,
+  DRV_TX_STATUS_SND_PAYLOAD,
   DRV_TX_STATUS_STOP,
 } DRV_TX_StatusTypeDef;
 
@@ -62,12 +63,14 @@ typedef struct {
 
 typedef struct {
   TIM_HandleTypeDef *htim;
-  uint32_t DataLen;
-  const uint8_t *Data;
-  uint32_t SendLen;
-  const uint8_t *Send;
   uint8_t PreloadData;
   uint8_t PreloadDataLen;
+  const uint8_t *Data;
+  const uint8_t *Payload;
+  const uint8_t *Header;
+  uint16_t DataLen;
+  uint16_t PayloadLen;
+  uint16_t HeaderLen;
   DRV_TX_StatusTypeDef Status;
   struct {
     uint8_t RLL: 1;
@@ -81,7 +84,7 @@ typedef struct {
 } DRV_HandleTypeDef;
 
 /* Static handler */
-extern DRV_HandleTypeDef DRV;
+//extern DRV_HandleTypeDef DRV;
 
 /* Function prototypes */
 void DRV_Init(void);
@@ -100,7 +103,9 @@ void DRV_TX_Preload(void);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
 
 /* Endpoints for API Calls */
-void DRV_API_Send(uint8_t *Data, uint32_t DataLen);
+void DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
+                       uint16_t PayloadLen);
+void DRV_API_ReceiveComplete(void);
 // Specific APIs for timer interrupts
 void DRV_API_InputCaptureCallback(TIM_HandleTypeDef *htim);
 void DRV_API_OutputCompareCallback(TIM_HandleTypeDef *htim);
