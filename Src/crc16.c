@@ -37,7 +37,6 @@ static const uint16_t CRC_LOOKUP_TABLE[]= {
 
 uint16_t CRC_Checksum(uint8_t *Data, uint16_t DataLen) {
   uint16_t Sum = 0;
-  int i;
   uint8_t TableId;
 
   while(DataLen--) {

@@ -15,6 +15,7 @@
 #include "macros.h"
 #include "cmsis_os.h"
 #include "phy.h"
+#include "string.h"
 
 #define DRV_RX_IDLE_COUNT 4
 #define DRV_RX_SYNC_COUNT 8
@@ -41,8 +42,7 @@ typedef enum {
   DRV_TX_STATUS_RESET,
   DRV_TX_STATUS_VISIBILITY,
   DRV_TX_STATUS_SYNC,
-  DRV_TX_STATUS_SND_HEADER,
-  DRV_TX_STATUS_SND_PAYLOAD,
+  DRV_TX_STATUS_ACTIVE,
   DRV_TX_STATUS_STOP,
 } DRV_TX_StatusTypeDef;
 
@@ -65,12 +65,10 @@ typedef struct {
   TIM_HandleTypeDef *htim;
   uint8_t PreloadData;
   uint8_t PreloadDataLen;
-  const uint8_t *Data;
-  const uint8_t *Payload;
-  const uint8_t *Header;
+  uint8_t *Data;
+  uint8_t *Send;
   uint16_t DataLen;
-  uint16_t PayloadLen;
-  uint16_t HeaderLen;
+  uint16_t SendLen;
   DRV_TX_StatusTypeDef Status;
   struct {
     uint8_t RLL: 1;
@@ -103,7 +101,7 @@ void DRV_TX_Preload(void);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
 
 /* Endpoints for API Calls */
-void DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
+uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
                        uint16_t PayloadLen);
 void DRV_API_ReceiveComplete(void);
 // Specific APIs for timer interrupts

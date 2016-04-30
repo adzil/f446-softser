@@ -17,6 +17,7 @@ const uint8_t DRV_TX_StartBit[] = {0x55,0x55,0x55,0x55,0x55,0x55, 0x55, 0x55,
                                    0x55,0x55, 0x55, 0x55,0x9A,0xD7,0x65,0x28};
 const uint8_t DRV_TX_Visibility[] = {0xE2, 0xD4, 0xB1, 0x39};
 const uint8_t DRV_TX_Stop[] = {0xFF};
+uint8_t DRV_TX_Buffer[2048];
 
 /* Function declaration */
 // Driver initialization code and Status Register settings
@@ -275,18 +276,13 @@ void DRV_TX_SetData(void) {
       DRV.TX.DataLen = sizeof(DRV_TX_StartBit);
       break;
 
-    case DRV_TX_STATUS_SND_HEADER:
-      DRV.TX.Data = DRV.TX.Header;
-      DRV.TX.DataLen = DRV.TX.HeaderLen;
-      break;
-
-    case DRV_TX_STATUS_SND_PAYLOAD:
-      DRV.TX.Data = DRV.TX.Payload;
-      DRV.TX.DataLen = DRV.TX.PayloadLen;
+    case DRV_TX_STATUS_ACTIVE:
+      DRV.TX.Data = DRV.TX.Send;
+      DRV.TX.DataLen = DRV.TX.SendLen;
       break;
 
     case DRV_TX_STATUS_STOP:
-      DRV.TX.Data = DRV_TX_Stop;
+      DRV.TX.Data = (uint8_t *) DRV_TX_Stop;
       DRV.TX.DataLen = 1;
       break;
 
@@ -308,16 +304,10 @@ void DRV_TX_Preload(void) {
         break;
 
       case DRV_TX_STATUS_SYNC:
-        DRV_TX_SetStatus(DRV_TX_STATUS_SND_HEADER);
+        DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
         break;
 
-      case DRV_TX_STATUS_SND_HEADER:
-        DRV_TX_SetStatus(DRV_TX_STATUS_SND_PAYLOAD);
-        break;
-
-      case DRV_TX_STATUS_SND_PAYLOAD:
-        // Tell PHY that send action is complete
-        PHY_API_SendComplete();
+      case DRV_TX_STATUS_ACTIVE:
         // Change to new state
         if (DRV.TX.SR.Visibility) {
           DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
@@ -342,8 +332,7 @@ void DRV_TX_Preload(void) {
   DRV.TX.PreloadData = *(DRV.TX.Data++);
   DRV.TX.PreloadDataLen = DRV_TX_PRELOAD_COUNT;
   // Double the preload count on RLL
-  if (DRV.TX.SR.RLL && (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
-                       DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD)) {
+  if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
     DRV.TX.PreloadDataLen *= 2;
   }
 }
@@ -380,14 +369,24 @@ void DRV_API_ReceiveComplete(void) {
 }
 
 // General purpose send function
-void DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
+uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
                        uint16_t PayloadLen) {
-  DRV.TX.Header = Header;
-  DRV.TX.HeaderLen = HeaderLen;
-  DRV.TX.Payload = Payload;
-  DRV.TX.PayloadLen = PayloadLen;
+
+  if (DRV.TX.Status != DRV_TX_STATUS_RESET &&
+      DRV.TX.Status != DRV_TX_STATUS_VISIBILITY) return 0;
+
+  DRV.TX.Send = DRV_TX_Buffer;
+  memcpy(DRV.TX.Send, Header, HeaderLen);
+  DRV.TX.Send += HeaderLen;
+  memcpy(DRV.TX.Send, Payload, PayloadLen);
+  DRV.TX.Send = DRV_TX_Buffer;
+
+  DRV.TX.SendLen = HeaderLen + PayloadLen;
+
   // Activate the transmission module
   DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
+
+  return 1;
 }
 
 // Interrupt callback on Input Capture match
@@ -453,8 +452,7 @@ void DRV_API_UpdateEventCallback(TIM_HandleTypeDef *htim) {
   }
   // Modify the preload data register
   if (--DRV.TX.PreloadDataLen) {
-    if (DRV.TX.Status == DRV_TX_STATUS_SND_HEADER ||
-        DRV.TX.Status == DRV_TX_STATUS_SND_PAYLOAD) {
+    if (DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
       if (DRV.TX.SR.RLL && (DRV.TX.PreloadDataLen & 1)) {
         // Generate Manchester RLL data
         DRV.TX.PreloadData ^= 0x80;
