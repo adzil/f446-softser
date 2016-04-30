@@ -17,8 +17,19 @@
 #define PHY_BUFFER_SIZE 2048
 #define PHY_CC_DEPTH 7
 #define PHY_CC_MEMORY_LENGTH (1 << (PHY_CC_DEPTH - 1))
+#define PHY_CC_DECODE_RESET_COUNT 32
+#define PHY_CC_DECODE_CONTINUE_COUNT 8
+#define PHY_RS_N 15
+#define PHY_RS_K 7
 
-#define PHY_HEADER_LENGTH 2
+#define PHY_RS_OUTPUT_LEN(N, K, LEN) (N * __CEIL_DIV(LEN, K) - \
+    (K - (LEN % K)))
+#define PHY_CC_OUTPUT_LEN(LEN) (LEN * 4 + 3);
+
+#define PHY_HEADER_LEN 4
+//#define PHY_HEADER_RS_LEN PHY_RS_OUTPUT_LEN(PHY_RS_N, PHY_RS_K, \
+//    PHY_HEADER_LEN)
+#define PHY_HEADER_CC_LEN PHY_CC_OUTPUT_LEN(PHY_HEADER_LEN)
 
 typedef enum {
   PHY_RX_STATUS_RESET,
@@ -38,6 +49,7 @@ typedef struct {
   uint32_t *LastData;
   uint8_t MinId;
   uint8_t State;
+  uint8_t Counter;
 } PHY_CC_HandleTypeDef;
 
 typedef struct {
@@ -46,11 +58,11 @@ typedef struct {
 
 typedef struct {
   BUF_HandleTypeDef Buffer;
-  uint8_t *WriteBuffer;
-  uint8_t *WriteBufferData;
-  uint16_t WriteBufferLength;
-  uint16_t ReceiveLength;
-  uint16_t Length;
+  uint8_t *ProcessPtr;
+  uint8_t *Process;
+  uint16_t ProcessLen;
+  uint16_t ReceiveLen;
+  uint16_t TotalLen;
   PHY_RX_StatusTypeDef Status;
 } PHY_RX_HandleTypeDef;
 

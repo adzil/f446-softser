@@ -6,6 +6,7 @@
 #define __GPIO_WRITE(GPIOx, PIN, STATE) if (STATE) GPIOx->BSRR |= (1<<PIN); \
 		else GPIOx->BSRR |= (0x10000<<PIN)
 #define __GPIO_READ(GPIOx, PIN) (uint8_t)((GPIOx->IDR >> PIN) & 1)
+#define __CEIL_DIV(a, b) ((a + b - 1) / b)
 #define _inline_ __attribute__((always_inline)) inline
 
 _inline_ uint8_t __popcnt8(uint8_t in) {

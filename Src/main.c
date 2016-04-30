@@ -42,7 +42,6 @@
 #include "cmsis_os.h"
 #include "macros.h"
 #include "drv.h"
-#include "thread.h"
 #include "memory.h"
 #include "phy.h"
 #include "stm32f4xx.h"
@@ -161,8 +160,6 @@ int main(void)
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
   //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
-  // Initialize from thread module
-  THR_Init();
   // Start thread execution
   osKernelStart();
 

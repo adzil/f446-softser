@@ -10,7 +10,10 @@ uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
 
 /* OS Thread Handle */
 osThreadId PHY_RX_ThreadId;
+osThreadDef(PHY_RX_Thread, osPriorityNormal, 1, 0);
+
 osThreadId PHY_TX_ThreadId;
+osThreadDef(PHY_TX_Thread, osPriorityNormal, 1, 0);
 
 const uint8_t PHY_CC_OUTPUT_TABLE[] = {
     0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,0xc3,0xf0,0xf0,0x0f,0x0f,0x3c,0x3c,0xc3,
@@ -40,6 +43,9 @@ void PHY_Init(void) {
   PHY.CC.LastData = PHY_CC_LastData_MEM;
 
   BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
+  // Thread initialization
+  PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
+  PHY_TX_ThreadId = osThreadCreate(osThread(PHY_TX_Thread), NULL);
 }
 
 void PHY_RX_Activate(void) {
@@ -51,7 +57,7 @@ void PHY_TX_Activate(void) {
   // Set signal to activate thread
   osSignalSet(PHY_TX_ThreadId, 0x01);
 }
-/*
+
 void PHY_CC_EncodeReset(void) {
   // Reset the state to 0
   PHY.CC.State = 0;
@@ -78,6 +84,8 @@ void PHY_CC_DecodeReset(void) {
 
   // Define the first state
   PHY.CC.LastDistance[0] = 0;
+  // Reset counter
+  PHY.CC.Counter = PHY_CC_DECODE_RESET_COUNT;
 }
 
 void PHY_CC_DecodeInput(uint8_t Input) {
@@ -130,12 +138,29 @@ void PHY_CC_DecodeInput(uint8_t Input) {
   TempPtr = PHY.CC.LastData;
   PHY.CC.LastData = PHY.CC.Data;
   PHY.CC.Data = (uint32_t *) TempPtr;
+  // Decrement counter
+  PHY.CC.Counter--;
 }
-*/
+
+uint8_t PHY_CC_DecodeOutput(uint8_t *Data) {
+  if (!PHY.CC.Counter) {
+    PHY.CC.Counter = PHY_CC_DECODE_CONTINUE_COUNT;
+    *Data = PHY.CC.LastDistance[PHY.CC.MinId] >> 24;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+uint32_t PHY_CC_DecodePop(void) {
+  return PHY.CC.LastDistance[PHY.CC.MinId] >> 6;
+}
 
 // Receiver handler
 void PHY_RX_Handler(void) {
   uint8_t *Buffer;
+  uint8_t Output;
+  uint32_t Pop;
   uint16_t Length;
 
   // Checks for buffer input
@@ -144,42 +169,55 @@ void PHY_RX_Handler(void) {
   if (!Buffer) return;
   // Jump to process header on reset
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
-    PHY.RX.WriteBuffer = MEM_Alloc(PHY_HEADER_LENGTH);
-    if (!PHY.RX.WriteBuffer) {
+    PHY.RX.ProcessPtr = MEM_Alloc(PHY_HEADER_CC_LEN);
+    if (!PHY.RX.ProcessPtr) {
       PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
       return;
     }
-    PHY.RX.WriteBufferData = PHY.RX.WriteBuffer;
-    PHY.RX.WriteBufferLength = PHY_HEADER_LENGTH;
+    PHY.RX.Process = PHY.RX.ProcessPtr;
+    PHY.RX.ProcessLen = PHY_HEADER_CC_LEN;
+
+    PHY_CC_DecodeReset();
 
     PHY_RX_SetStatus(PHY_RX_STATUS_PROC_HEADER);
   }
-  
-  // Write to the new buffer
-  *PHY.RX.WriteBufferData++ = *Buffer;
+
+  // Do CC Decode
+  PHY_CC_DecodeInput(*Buffer >> 4);
+  PHY_CC_DecodeInput(*Buffer & 0xf);
+  // Check for output
+  if (PHY_CC_DecodeOutput(&Output)) {
+    *PHY.RX.Process++ = Output;
+  }
 
   // Next state decisions
-  if (!--PHY.RX.WriteBufferLength) {
+  if (!--PHY.RX.ProcessLen) {
+    // Get leftover data
+    Pop = PHY_CC_DecodePop();
+    *PHY.RX.Process++ = (Pop >> 16) & 0xff;
+    *PHY.RX.Process++ = (Pop >> 8) & 0xff;
+    *PHY.RX.Process++ = Pop & 0xff;
+
     switch (PHY.RX.Status) {
       case PHY_RX_STATUS_PROC_HEADER:
-        Length = __REV16(*((uint16_t *)PHY.RX.WriteBuffer));
-        MEM_Free(PHY.RX.WriteBuffer);
-        PHY.RX.WriteBuffer = MEM_Alloc(Length);
-        if (!PHY.RX.WriteBuffer) {
+        Length = __REV16(*((uint16_t *)PHY.RX.ProcessPtr));
+        MEM_Free(PHY.RX.ProcessPtr);
+        PHY.RX.ProcessPtr = MEM_Alloc(Length);
+        if (!PHY.RX.ProcessPtr) {
           PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
           break;
         }
-        PHY.RX.WriteBufferData = PHY.RX.WriteBuffer;
-        PHY.RX.WriteBufferLength = Length;
-        PHY.RX.Length = Length + PHY_HEADER_LENGTH;
+        PHY.RX.Process = PHY.RX.ProcessPtr;
+        PHY.RX.ProcessLen = Length;
+        PHY.RX.TotalLen = Length + PHY_HEADER_LENGTH;
 
         PHY_RX_SetStatus(PHY_RX_STATUS_PROC_PAYLOAD);
         break;
 
       case PHY_RX_STATUS_PROC_PAYLOAD:
-        HAL_UART_Transmit(&huart2, PHY.RX.WriteBuffer,
+        HAL_UART_Transmit(&huart2, PHY.RX.ProcessPtr,
                           PHY.RX.Length - PHY_HEADER_LENGTH, 0xff);
-        MEM_Free(PHY.RX.WriteBuffer);
+        MEM_Free(PHY.RX.ProcessPtr);
 
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
         break;
@@ -197,8 +235,8 @@ void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
   switch (PHY.RX.Status) {
     case PHY_RX_STATUS_RESET:
       BUF_Flush(&PHY.RX.Buffer);
-      PHY.RX.ReceiveLength = 0;
-      PHY.RX.Length = 0;
+      PHY.RX.ReceiveLen = 0;
+      PHY.RX.TotalLen = 0;
       DRV_API_ReceiveComplete();
       break;
 
@@ -250,11 +288,12 @@ void PHY_API_SendComplete(void) {
 uint8_t PHY_API_DataReceived(uint8_t Data) {
   uint8_t *Buffer;
 
-  if (PHY.RX.Length && PHY.RX.ReceiveLength >= PHY.RX.Length) return 1;
+  if (PHY.RX.TotalLen && PHY.RX.ReceiveLen >= PHY.RX.TotalLen)
+    return 1;
   Buffer = BUF_Write(&PHY.RX.Buffer);
   if (!Buffer) return 1;
   *Buffer = Data;
-  PHY.RX.ReceiveLength++;
+  PHY.RX.ReceiveLen++;
   PHY_RX_Activate();
   return 0;
 }
@@ -263,13 +302,22 @@ void PHY_RX_Thread(const void *argument) {
   // Endless loop
   while (1) {
     // Wait for activation if RX is sleeping
-    if (PHY.RX.Status == PHY_RX_STATUS_RESET &&
-        PHY.TX.Status == PHY_TX_STATUS_RESET) {
+    if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
       osSignalWait(0x01, osWaitForever);
     }
     // PHY Data handler
     PHY_RX_Handler();
-    // PHY Status Register handler
+  }
+}
+
+void PHY_TX_Thread(const void *argument) {
+  // Endless loop
+  while (1) {
+    // Wait for activation if RX is sleeping
+    if (PHY.RX.Status == PHY_TX_STATUS_RESET) {
+      osSignalWait(0x01, osWaitForever);
+    }
+    // PHY Data handler
     PHY_SR_Handler();
   }
 }
