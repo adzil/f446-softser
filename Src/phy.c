@@ -50,20 +50,29 @@ void PHY_Init(void) {
 
 void PHY_RX_Activate(void) {
   // Set signal to activate thread
-  osSignalSet(PHY_RX_ThreadId, 0x01);
+  if (PHY.RX.Status == PHY_RX_STATUS_RESET)
+    osSignalSet(PHY_RX_ThreadId, 0x01);
 }
 
 void PHY_TX_Activate(void) {
   // Set signal to activate thread
-  osSignalSet(PHY_TX_ThreadId, 0x01);
+  if (PHY.TX.Status == PHY_TX_STATUS_RESET)
+    osSignalSet(PHY_TX_ThreadId, 0x01);
 }
 
-void PHY_CC_EncodeReset(void) {
-  // Reset the state to 0
-  PHY.CC.State = 0;
-}
+uint8_t *PHY_CC_Encode(uint8_t *Data, uint16_t DataLen) {
+  uint16_t RetLen = PHY_CC_OUTPUT_LEN(DataLen);
+  uint8_t *RetData = MEM_Alloc(RetLen);
+  uint8_t *IterData = RetData;
 
-uint8_t PHY_CC_Encode(uint8_t Input) {
+  DataLen <<= 3;
+
+  while (DataLen--) {
+    // Shift the State register
+    PHY.CC.State >>= 1;
+    // Shift the new data
+    if (IterData) PHY.CC.State |= (1 << (PHY_CC_DEPTH - 1));
+  }
   // Shift the State register
   PHY.CC.State >>= 1;
   // Shift the new data
@@ -166,20 +175,24 @@ void PHY_RX_Handler(void) {
   // Checks for buffer input
   Buffer = BUF_Read(&PHY.RX.Buffer);
   // Discard handler on empty buffer
-  if (!Buffer) return;
+  if (!Buffer) {
+    // Give chance for another thread first
+    osThreadYield();
+    return;
+  }
   // Jump to process header on reset
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
-    PHY.RX.ProcessPtr = MEM_Alloc(PHY_HEADER_CC_LEN);
+    PHY.RX.ProcessPtr = MEM_Alloc(PHY_HEADER_LEN);
     if (!PHY.RX.ProcessPtr) {
       PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
       return;
     }
     PHY.RX.Process = PHY.RX.ProcessPtr;
-    PHY.RX.ProcessLen = PHY_HEADER_CC_LEN;
+    PHY.RX.ProcessLen = PHY_HEADER_LEN;
 
     PHY_CC_DecodeReset();
 
-    PHY_RX_SetStatus(PHY_RX_STATUS_PROC_HEADER);
+    PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_HEADER);
   }
 
   // Do CC Decode
@@ -199,24 +212,34 @@ void PHY_RX_Handler(void) {
     *PHY.RX.Process++ = Pop & 0xff;
 
     switch (PHY.RX.Status) {
-      case PHY_RX_STATUS_PROC_HEADER:
+      case PHY_RX_STATUS_PROCESS_HEADER:
+        // Do CRC checking
+        if (CRC_Checksum(PHY.RX.ProcessPtr, PHY.RX.ProcessLen)) {
+          assert_user(0, "CRC Check failed");
+          PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
+          return;
+        }
+        // Get payload length
         Length = __REV16(*((uint16_t *)PHY.RX.ProcessPtr));
         MEM_Free(PHY.RX.ProcessPtr);
         PHY.RX.ProcessPtr = MEM_Alloc(Length);
         if (!PHY.RX.ProcessPtr) {
           PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
-          break;
+          return;
         }
         PHY.RX.Process = PHY.RX.ProcessPtr;
         PHY.RX.ProcessLen = Length;
-        PHY.RX.TotalLen = Length + PHY_HEADER_LENGTH;
+        PHY.RX.PayloadLen = Length;
+        // Transform length
+        Length = PHY_CC_OUTPUT_LEN(Length);
+        PHY.RX.TotalLen = Length + PHY_HEADER_CC_LEN;
 
-        PHY_RX_SetStatus(PHY_RX_STATUS_PROC_PAYLOAD);
+        PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_PAYLOAD);
         break;
 
-      case PHY_RX_STATUS_PROC_PAYLOAD:
+      case PHY_RX_STATUS_PROCESS_PAYLOAD:
         HAL_UART_Transmit(&huart2, PHY.RX.ProcessPtr,
-                          PHY.RX.Length - PHY_HEADER_LENGTH, 0xff);
+                          PHY.RX.PayloadLen, 0xff);
         MEM_Free(PHY.RX.ProcessPtr);
 
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
@@ -263,20 +286,27 @@ void PHY_TX_SetStatus(PHY_TX_StatusTypeDef Status) {
 }
 
 uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
+  uint16_t Sum;
+
   // Check if there is ongoing send process
   if (PHY.TX.Status != PHY_TX_STATUS_RESET) return 1;
 
   PHY_TX_SetStatus(PHY_TX_STATUS_ACTIVE);
 
-  PHY.TX.Header = MEM_Alloc(PHY_HEADER_LENGTH);
+  PHY.TX.Header = MEM_Alloc(PHY_HEADER_LEN);
   if (!PHY.TX.Header) {
     MEM_Free(Data);
     PHY_TX_SetStatus(PHY_TX_STATUS_RESET);
     return 1;
   }
   *((uint16_t *)PHY.TX.Header) = __REV16(DataLen);
+
+  // Do crc checksum
+  Sum = CRC_Checksum(PHY.TX.Header, PHY_HEADER_LEN - 2);
+  *((uint16_t *)PHY.TX.Header + PHY_HEADER_LEN - 2) = __REV16(Sum);
+
   PHY.TX.Payload = Data;
-  DRV_API_SendStart(PHY.TX.Header, PHY_HEADER_LENGTH, Data, DataLen);
+  DRV_API_SendStart(PHY.TX.Header, PHY_HEADER_LEN, Data, DataLen);
   return 0;
 }
 
@@ -303,6 +333,7 @@ void PHY_RX_Thread(const void *argument) {
   while (1) {
     // Wait for activation if RX is sleeping
     if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
+      osSignalClear(PHY_RX_ThreadId, 0x01);
       osSignalWait(0x01, osWaitForever);
     }
     // PHY Data handler

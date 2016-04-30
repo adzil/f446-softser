@@ -13,6 +13,7 @@
 #include "drv.h"
 #include "usart.h"
 #include "macros.h"
+#include "crc16.h"
 
 #define PHY_BUFFER_SIZE 2048
 #define PHY_CC_DEPTH 7
@@ -33,8 +34,8 @@
 
 typedef enum {
   PHY_RX_STATUS_RESET,
-  PHY_RX_STATUS_PROC_HEADER,
-  PHY_RX_STATUS_PROC_PAYLOAD
+  PHY_RX_STATUS_PROCESS_HEADER,
+  PHY_RX_STATUS_PROCESS_PAYLOAD
 } PHY_RX_StatusTypeDef;
 
 typedef enum {
@@ -61,6 +62,7 @@ typedef struct {
   uint8_t *ProcessPtr;
   uint8_t *Process;
   uint16_t ProcessLen;
+  uint16_t PayloadLen;
   uint16_t ReceiveLen;
   uint16_t TotalLen;
   PHY_RX_StatusTypeDef Status;
