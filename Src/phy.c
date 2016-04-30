@@ -36,18 +36,6 @@ _inline_ uint8_t PHY_CC_Popcnt(uint8_t input) {
   return input;
 }
 
-void PHY_Init(void) {
-  PHY.CC.Distance = PHY_CC_Distance_MEM;
-  PHY.CC.LastDistance = PHY_CC_LastDistance_MEM;
-  PHY.CC.Data = PHY_CC_Data_MEM;
-  PHY.CC.LastData = PHY_CC_LastData_MEM;
-
-  BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
-  // Thread initialization
-  PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
-  //PHY_TX_ThreadId = osThreadCreate(osThread(PHY_TX_Thread), NULL);
-}
-
 void PHY_RX_Activate(void) {
   // Set signal to activate thread
   if (PHY.RX.Status == PHY_RX_STATUS_RESET)
@@ -118,6 +106,20 @@ void PHY_CC_DecodeReset(void) {
   PHY.CC.Counter = PHY_CC_DECODE_RESET_COUNT;
 }
 
+void PHY_Init(void) {
+  PHY.CC.Distance = PHY_CC_Distance_MEM;
+  PHY.CC.LastDistance = PHY_CC_LastDistance_MEM;
+  PHY.CC.Data = PHY_CC_Data_MEM;
+  PHY.CC.LastData = PHY_CC_LastData_MEM;
+  
+  PHY_CC_DecodeReset();
+
+  BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
+  // Thread initialization
+  PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
+  //PHY_TX_ThreadId = osThreadCreate(osThread(PHY_TX_Thread), NULL);
+}
+
 void PHY_CC_DecodeInput(uint8_t Input) {
   uint16_t MinDistance, NextDistance0, NextDistance1;
   uint8_t NextPos0, NextPos1, MinId;
@@ -148,7 +150,7 @@ void PHY_CC_DecodeInput(uint8_t Input) {
       PHY.CC.Data[NextPos1] = (PHY.CC.LastData[i] << 1) | 1;
     }
     // Reset the distance
-    PHY.CC.LastDistance[i] = 0xff;
+    PHY.CC.LastDistance[i] = 0xffff;
     // Get minimum distance
     if (MinDistance > PHY.CC.Distance[NextPos0]) {
       MinDistance = PHY.CC.Distance[NextPos0];
@@ -175,7 +177,7 @@ void PHY_CC_DecodeInput(uint8_t Input) {
 uint8_t PHY_CC_DecodeOutput(uint8_t *Data) {
   if (!PHY.CC.Counter) {
     PHY.CC.Counter = PHY_CC_DECODE_CONTINUE_COUNT;
-    *Data = PHY.CC.LastDistance[PHY.CC.MinId] >> 24;
+    *Data = PHY.CC.LastData[PHY.CC.MinId] >> 24;
     return 1;
   } else {
     return 0;
@@ -183,21 +185,25 @@ uint8_t PHY_CC_DecodeOutput(uint8_t *Data) {
 }
 
 uint32_t PHY_CC_DecodePop(void) {
-  return PHY.CC.LastDistance[PHY.CC.MinId] >> 6;
+  return PHY.CC.LastData[PHY.CC.MinId] >> 6;
 }
 
 uint8_t PHY_RX_SetProcess(uint16_t DataLen) {
   uint8_t *Data;
+  uint16_t EncodeLen;
+
+  EncodeLen = PHY_CC_ENCODE_LEN(DataLen);
 
   Data = MEM_Alloc(DataLen);
   if (!Data) {
     PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
     return 0;
   }
+
   PHY.RX.Process.Data = Data;
   PHY.RX.Process.ProcessData = Data;
-  PHY.RX.Process.Len = DataLen;
-  PHY.RX.Process.ProcessLen = DataLen;
+  PHY.RX.Process.Len = EncodeLen;
+  PHY.RX.Process.ProcessLen = EncodeLen;
 
   return 1;
 }
@@ -285,7 +291,7 @@ void PHY_RX_Handler(void) {
 
   // Check for last status
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
-    PHY_CC_DecodeReset();
+    //PHY_CC_DecodeReset();
     // Set status to Header retrieval
     if (!PHY_RX_SetProcess(PHY_HEADER_LEN)) return;
     PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_HEADER);
@@ -304,6 +310,7 @@ void PHY_RX_Handler(void) {
     *(PHY.RX.Process.Data++) = (Pop >> 16) & 0xff;
     *(PHY.RX.Process.Data++) = (Pop >> 8) & 0xff;
     *(PHY.RX.Process.Data++) = Pop & 0xff;
+    PHY_CC_DecodeReset();
 
     switch (PHY.RX.Status) {
       case PHY_RX_STATUS_PROCESS_HEADER:
@@ -316,7 +323,7 @@ void PHY_RX_Handler(void) {
           return;
         }
         PHY.RX.PayloadLen = __REV16(*((uint16_t *)PHY.RX.Process.ProcessData));
-        PHY.RX.TotalLen = PHY.RX.PayloadLen + PHY_HEADER_CC_LEN;
+        PHY.RX.TotalLen = PHY_CC_ENCODE_LEN(PHY.RX.PayloadLen) + PHY_HEADER_CC_LEN;
         // Reserve for payload
         PHY_RX_ClearProcess();
         if (!PHY_RX_SetProcess(PHY.RX.PayloadLen)) return;
@@ -325,7 +332,7 @@ void PHY_RX_Handler(void) {
 
       case PHY_RX_STATUS_PROCESS_PAYLOAD:
         HAL_UART_Transmit(&huart2, PHY.RX.Process.ProcessData,
-                          PHY.RX.Process.ProcessLen, 0xff);
+                          PHY.RX.PayloadLen, 0xff);
         PHY_RX_ClearProcess();
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
         break;
