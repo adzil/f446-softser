@@ -14,6 +14,7 @@
 #include "usart.h"
 #include "macros.h"
 #include "crc16.h"
+#include "rs.h"
 
 #define PHY_BUFFER_SIZE 2048
 #define PHY_CC_DEPTH 7

@@ -82,7 +82,8 @@ void DRV_RX_ActiveHandler(void) {
     Data = DRV.RX.DataBit & 0xff;
     if (PHY_API_DataReceived(Data)) {
       // Process incoming message delay
-      DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
+      if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE)
+        DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
     }
   }
 }

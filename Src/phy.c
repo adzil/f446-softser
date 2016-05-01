@@ -108,6 +108,9 @@ void PHY_Init(void) {
   
   PHY_CC_DecodeReset();
 
+  // Initialize RS
+  INIT_RS(4, 0x13, 1, 1, 8);
+
   BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
   // Thread initialization
   PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
@@ -262,7 +265,11 @@ uint8_t PHY_API_DataReceived(uint8_t Data) {
   if (PHY.RX.TotalLen && PHY.RX.ReceiveLen >= PHY.RX.TotalLen)
     return 1;
   Buffer = BUF_Write(&PHY.RX.Buffer);
-  if (!Buffer) return 1;
+  if (!Buffer) {
+    // Oops! buffer is full
+    PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
+    return 1;
+  }
   *Buffer = Data;
   PHY.RX.ReceiveLen++;
   return 0;
