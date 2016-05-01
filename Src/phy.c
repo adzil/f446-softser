@@ -36,12 +36,6 @@ _inline_ uint8_t PHY_CC_Popcnt(uint8_t input) {
   return input;
 }
 
-void PHY_RX_Activate(void) {
-  // Set signal to activate thread
-  if (PHY.RX.Status == PHY_RX_STATUS_RESET)
-    osSignalSet(PHY_RX_ThreadId, 0x01);
-}
-
 uint8_t *PHY_CC_Encode(uint8_t *Data, uint16_t *DataLen) {
   uint8_t *RetData;
   uint8_t *IterData;

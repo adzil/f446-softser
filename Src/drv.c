@@ -80,7 +80,7 @@ void DRV_RX_ActiveHandler(void) {
     DRV_RX_WriteReset();
     // Extract the actual 8 bit data
     Data = DRV.RX.DataBit & 0xff;
-    if (Data == 0xff || PHY_API_DataReceived(Data)) {
+    if (PHY_API_DataReceived(Data)) {
       // Process incoming message delay
       DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
     }
