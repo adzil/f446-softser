@@ -20,12 +20,7 @@
 #define PHY_CC_MEMORY_LENGTH (1 << (PHY_CC_DEPTH - 1))
 #define PHY_CC_DECODE_RESET_COUNT 32
 #define PHY_CC_DECODE_CONTINUE_COUNT 8
-#define PHY_RS_N 15
-#define PHY_RS_K 7
-#define PHY_RS_2T PHY_RS_N - PHY_RS_K
 
-#define PHY_RS_ENCODE_LEN(LEN) (N * (LEN/PHY_RS_K) + LEN % PHY_RS_K + PHY_RS_2T)
-#define PHY_RS_DECODE_LEN(LEN) (K * (LEN / N) + LEN % PHY_RS_N - PHY_RS_2T)
 #define PHY_CC_ENCODE_LEN(LEN) (LEN * 4 + 3)
 #define PHY_CC_DECODE_LEN(LEN) ((LEN - 3) / 4)
 

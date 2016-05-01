@@ -14,6 +14,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Src/memory.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/phy.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/usart.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/App/rstest.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/phy.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/macros.h" isTestSource="false" />

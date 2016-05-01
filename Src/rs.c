@@ -321,3 +321,115 @@ int DECODE_RS(DTYPE *data, int *eras_pos, int no_eras){
   }
   return count;
 }
+
+// RS Utility with padding and interleaving
+void RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
+  int id, datacount, rscount, incount, outcount, itercount;
+
+  const int EncodedLen = RS_ENCODE_LEN(Length);
+  // Modify length size
+  Length *= 2;
+  // Constant property
+  const int Depth = __CEIL_DIV(Length, 7);
+  const int PadDataLen = Length % 7;
+  const int PadLen = (PadDataLen + 8) * Depth;
+
+  // Change input and output to nibble type
+  NibbleTypeDef *Out = (NibbleTypeDef *) OutPtr;
+  NibbleTypeDef *In = (NibbleTypeDef *) InPtr;
+  // Buffer for single RS encoding
+  uint8_t Data[15];
+  // Get RS loop
+  rscount = Depth;
+  incount = 0;
+  itercount = 0;
+
+  while (rscount-- > 0) {
+    // Empty the data buffer
+    memset(Data, 0, 15);
+    // Check for data count
+    if (rscount == 0) {
+      datacount = PadDataLen;
+    } else {
+      datacount = 7;
+    }
+    // Reload the data buffer
+    for (id = 0; id < datacount; id++) {
+      Data[id] = NibbleRead(In, incount++);
+    }
+    // Do the RS encoding
+    ENCODE_RS(Data, Data + 7);
+
+    // Put the data on the output buffer
+    outcount = 0;
+    for (id = itercount++; id < EncodedLen;) {
+      if (rscount == 0 && outcount == datacount) {
+        outcount = 7;
+      }
+      NibbleWrite(Out, id, Data[outcount++]);
+      // Update the id
+      if (id < PadLen) {
+        id += Depth;
+      } else {
+        id += Depth - 1;
+      }
+    }
+  }
+}
+
+// RS Utility with padding and interleaving
+void RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
+  int id, datacount, rscount, incount, outcount, itercount;
+
+  // Modify length size
+  Length *= 2;
+  // Constant property
+  const int Depth = __CEIL_DIV(Length, 15);
+  const int PadDataLen = Length % 15;
+  const int PadLen = PadDataLen * Depth;
+
+  // Change input and output to nibble type
+  NibbleTypeDef *Out = (NibbleTypeDef *) OutPtr;
+  NibbleTypeDef *In = (NibbleTypeDef *) InPtr;
+  // Buffer for single RS encoding
+  uint8_t Data[15];
+  // Get RS loop
+  rscount = Depth;
+  outcount = 0;
+  itercount = 0;
+
+  while (rscount-- > 0) {
+    // Empty the data buffer
+    memset(Data, 0, 15);
+    // Check for data count
+    if (rscount == 0) {
+      datacount = PadDataLen - 8;
+    } else {
+      datacount = 15;
+    }
+    // Reload the data buffer
+    incount = 0;
+    for (id = itercount++; id < Length;) {
+      // Align zeroes
+      if (rscount == 0) {
+        if (incount == datacount)
+          incount = 7;
+        else if (incount >= 15)
+          break;
+      }
+      Data[incount++] = NibbleRead(In, id);
+      // Update the id
+      if (id < PadLen) {
+        id += Depth;
+      } else {
+        id += Depth - 1;
+      }
+    }
+    // Do the RS encoding
+    DECODE_RS(Data, NULL, 0);
+    // Put the data on the output buffer
+    for (id = 0; id < 7; id++) {
+      NibbleWrite(Out, outcount++, Data[id]);
+    }
+  }
+}

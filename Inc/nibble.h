@@ -2,6 +2,7 @@
 #define __NIBBLE
 
 #include <inttypes.h>
+#include <macros.h>
 
 typedef union {
   struct {
@@ -11,24 +12,24 @@ typedef union {
   uint8_t Data;
 } NibbleTypeDef;
 
-inline void NibbleWrite(NibbleTypeDef *Nibble, int Id, uint8_t Data) {
+_inline_ void NibbleWrite(NibbleTypeDef *Nibble, int Id, uint8_t Data) {
   // Address Offset
-  Nibble += Id;
+  Nibble += (Id >> 1);
   if (Id & 1) {
-    Nibble->High = Data;
-  } else {
     Nibble->Low = Data;
-  }
-}
-
-inline uint8_t NibbleRead(NibbleTypeDef *Nibble, int Id) {
-  // Address Offset
-  Nibble += Id;
-  if (Id & 1) {
-    return Nibble->High;
   } else {
-    return Nibble->Low;
+    Nibble->High = Data;
   }
 }
 
-#endif __NIBBLE
+_inline_ uint8_t NibbleRead(NibbleTypeDef *Nibble, int Id) {
+  // Address Offset
+  Nibble += (Id >> 1);
+  if (Id & 1) {
+    return Nibble->Low;
+  } else {
+    return Nibble->High;
+  }
+}
+
+#endif //__NIBBLE
