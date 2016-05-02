@@ -167,7 +167,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    osDelay(500);
+    //osDelay(100);
+    PHY_API_SendStart(TXData, sizeof(TXData) - 1);
     osSignalSet(tid_blinkLED, 0x0001);
 
 #ifdef  USE_FULL_ASSERT
