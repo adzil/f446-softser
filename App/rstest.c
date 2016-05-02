@@ -24,7 +24,7 @@ int main(void) {
   Decoded = calloc(Length, sizeof(uint8_t));
   // Do RS encode
   RS_Encode(Encoded, Data, Length);
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < 11; i++) {
     Encoded[i+6] ^= 0xff;
   }
   RS_Decode(Decoded, Encoded, EncLength);
