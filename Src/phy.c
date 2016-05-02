@@ -55,9 +55,7 @@ void PHY_TX_CreateHeader(uint8_t *Header, uint16_t Length) {
 
 PHY_Status PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
   uint8_t *RSData;
-  uint8_t *CCData;
   uint16_t RSLen;
-  uint16_t CCLen;
 
   // Create RS data
   RSLen = FEC_RS_BUFFER_LEN(Length);
@@ -67,16 +65,9 @@ PHY_Status PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
   }
   FEC_RS_Encode(RSData, Input, Length);
   // Create CC data
-  CCLen = FEC_CC_BUFFER_LEN(RSLen);
-  CCData = MEM_Alloc(CCLen);
-  if (!CCData) {
-    MEM_Free(RSData);
-    return PHY_MEM_NOT_AVAIL;
-  }
-  FEC_CC_Encode(CCData, RSData, RSLen);
+  FEC_CC_Encode(Output, RSData, RSLen);
   // Free memory
   MEM_Free(RSData);
-  MEM_Free(CCData);
 
   return PHY_OK;
 }
@@ -91,7 +82,7 @@ PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
   // Create header
   RawHeader = MEM_Alloc(PHY_HEADER_LEN);
   if (!RawHeader) return PHY_MEM_NOT_AVAIL;
-  PHY_TX_CreateHeader(RawHeader, PHY_HEADER_LEN);
+  PHY_TX_CreateHeader(RawHeader, Length);
   // Create encoded header
   HeaderLen = FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
   Header = MEM_Alloc(HeaderLen);
@@ -184,6 +175,7 @@ void PHY_RX_Handler(void) {
 
         FEC_CC_DecodeInit(PHY.RX.RcvBuffer,
                           FEC_RS_BUFFER_LEN(PHY.RX.PayloadLen));
+        PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_PAYLOAD);
         break;
 
       case PHY_RX_STATUS_PROCESS_PAYLOAD:

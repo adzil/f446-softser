@@ -561,6 +561,16 @@
               <FileType>1</FileType>
               <FilePath>..\Src\crc16.c</FilePath>
             </File>
+            <File>
+              <FileName>fec.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\fec.c</FilePath>
+            </File>
+            <File>
+              <FileName>rs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\rs.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1132,6 +1142,16 @@
               <FileName>crc16.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\crc16.c</FilePath>
+            </File>
+            <File>
+              <FileName>fec.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\fec.c</FilePath>
+            </File>
+            <File>
+              <FileName>rs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\rs.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,6 +1,8 @@
 #ifndef __NIBBLE
 #define __NIBBLE
 
+#pragma anon_unions
+
 #include <inttypes.h>
 #include <macros.h>
 

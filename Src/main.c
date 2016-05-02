@@ -59,11 +59,7 @@ char Buf[1024];
 // Required for HAL_GetTick function
 extern uint32_t os_time;
 
-uint8_t TXData[] = "This is a test "
-    "data from me please dont go\r\nThis should show up on your terminal "
-    "without any errors. If so, please check whether your connection is OK or"
-    " it may be had some issues. Please fix it before try to communicate with"
-    " our system. Thank you.\r\n\r\n";
+uint8_t TXData[] = "Test data, should be readable on terminal.\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -144,11 +140,12 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
-#ifdef  USE_FULL_ASSERT
+//#ifdef  USE_FULL_ASSERT
   // Board - Serial identification
-  sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication Project\r\n---\r\n\r\n");
+  sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication "
+      "Project\r\n---\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
-#endif
+//#endif
   // Initialize Optical Driver
   DRV_Init();
   // Initialize Memory

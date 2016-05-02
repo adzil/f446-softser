@@ -1,7 +1,7 @@
 /* Self library includes */
-#include "memory.h"
-#include <stm32f4xx_hal.h>
-#include <lock.h>
+#include <memory.h>
+#include "debug.h"
+#include "lock.h"
 
 static uint8_t MEM_Heap[MEM_HEAP_SIZE];
 static uint8_t *MEM_SM_Head;
@@ -57,10 +57,6 @@ void *MEM_Alloc(int size) {
 
   // Change current pointer to the head
   ptr = *head;
-#ifdef USE_FULL_ASSERT
-  // Check for memory exhaustion
-  assert_user((ptr), "Memory pool exhaustion");
-#endif
   // Checks for memory pool availability
   if (ptr) {
     // Change the head pointer to the next free pointer
@@ -69,6 +65,8 @@ void *MEM_Alloc(int size) {
     *((uint8_t ***) ptr) = head;
     // Return the reserved memory address
     ptr += PTR_SIZE;
+  } else {
+    Log("WARNING: Memory exhaustion detected.\r\n");
   }
 
   // Unlock the memory operation
