@@ -1,5 +1,7 @@
 /* Self library includes */
 #include "memory.h"
+#include <stm32f4xx_hal.h>
+#include <lock.h>
 
 static uint8_t MEM_Heap[MEM_HEAP_SIZE];
 static uint8_t *MEM_SM_Head;

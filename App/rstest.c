@@ -15,16 +15,16 @@ int main(void) {
   INIT_RS(4, 0x13, 1, 1, 8);
   // Calculate length
   Length = sizeof(Data) - 1;
-  EncLength = __CEIL_DIV(RS_ENCODE_LEN(Length), 2);
+  EncLength = RS_ENCODE_BUFF(Length);
   // Initialize encoded memory
   Encoded = calloc(EncLength, sizeof(uint8_t));
   Decoded = calloc(Length, sizeof(uint8_t));
   // Do RS encode
   RS_Encode(Encoded, Data, Length);
-  for (i = 0; i < 11; i++) {
+  for (i = 0; i < 10; i++) {
     Encoded[i+6] ^= 0xff;
   }
-  RS_Decode(Decoded, Encoded, EncLength);
+  RS_Decode(Decoded, Encoded, Length);
 
   return 0;
 }

@@ -17,10 +17,6 @@
 #include "rs.h"
 
 #define PHY_BUFFER_SIZE 2048
-#define PHY_CC_DEPTH 7
-#define PHY_CC_MEMORY_LENGTH (1 << (PHY_CC_DEPTH - 1))
-#define PHY_CC_DECODE_RESET_COUNT 32
-#define PHY_CC_DECODE_CONTINUE_COUNT 8
 
 #define PHY_CC_ENCODE_LEN(LEN) (LEN * 4 + 3)
 #define PHY_CC_DECODE_LEN(LEN) ((LEN - 3) / 4)
@@ -42,16 +38,6 @@ typedef enum {
 } PHY_TX_StatusTypeDef;
 
 typedef struct {
-  uint16_t *Distance;
-  uint16_t *LastDistance;
-  uint32_t *Data;
-  uint32_t *LastData;
-  uint8_t MinId;
-  uint8_t State;
-  uint8_t Counter;
-} PHY_CC_HandleTypeDef;
-
-typedef struct {
   BUF_HandleTypeDef Buffer;
   uint16_t ReceiveLen;
   uint16_t TotalLen;
@@ -66,7 +52,6 @@ typedef struct {
 } PHY_RX_HandleTypeDef;
 
 typedef struct {
-  PHY_CC_HandleTypeDef CC;
   PHY_RX_HandleTypeDef RX;
 } PHY_HandleTypeDef;
 

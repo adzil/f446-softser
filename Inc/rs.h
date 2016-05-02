@@ -10,17 +10,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <nibble.h>
-#include <macros.h>
-
-#define PHY_RS_N 15
-#define PHY_RS_K 7
-#define RS_MULT(LEN) (LEN * 2)
-#define RS_ENCODE_LEN(LEN) (PHY_RS_N * __CEIL_DIV(RS_MULT(LEN), PHY_RS_K) - \
-    (PHY_RS_K - (RS_MULT(LEN) % PHY_RS_K)))
-#define RS_DECODE_LEN(LEN) (PHY_RS_K * __CEIL_DIV(RS_MULT(LEN), PHY_RS_N) - \
-    (PHY_RS_N - (RS_MULT(LEN) % PHY_RS_N)))
-
 #define DTYPE unsigned char
 
 /* Reed-Solomon codec control block */
@@ -68,8 +57,5 @@ void ENCODE_RS(DTYPE *data,DTYPE *parity);
 int DECODE_RS(DTYPE *data,int *eras_pos,int no_eras);
 void INIT_RS(unsigned int symsize,unsigned int gfpoly,unsigned int fcr,
              unsigned int prim,unsigned int nroots);
-
-void RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length);
-void RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length);
 
 #endif //F446_SOFTSER_RS_H
