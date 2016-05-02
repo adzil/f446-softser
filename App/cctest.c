@@ -32,14 +32,14 @@ int main(void) {
 
   // Introduce errors
   for (i = 0; i < 50; i++) {
-    OutCC[i+10] = 0xff;
+    OutCC[i+10] ^= 0xff;
   }
 
   for (i = 0; i < 50; i++) {
-    OutCC[i+500] = 0xff;
+    OutCC[i+500] ^= 0xff;
   }
 
-  while(!FEC_CC_DecodeComplete()) {
+  while(FEC_CC_DecodeComplete() != FEC_OK) {
     FEC_CC_DecodeInput(*(OutCC++));
   }
   // DecodeRS

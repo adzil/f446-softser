@@ -374,7 +374,7 @@ uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
                        uint16_t PayloadLen) {
 
   if (DRV.TX.Status != DRV_TX_STATUS_RESET &&
-      DRV.TX.Status != DRV_TX_STATUS_VISIBILITY) return 0;
+      DRV.TX.Status != DRV_TX_STATUS_VISIBILITY) return 1;
 
   DRV.TX.Send = DRV_TX_Buffer;
   memcpy(DRV.TX.Send, Header, HeaderLen);
@@ -387,7 +387,7 @@ uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
   // Activate the transmission module
   DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
 
-  return 1;
+  return 0;
 }
 
 // Interrupt callback on Input Capture match

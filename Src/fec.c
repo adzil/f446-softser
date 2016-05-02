@@ -175,11 +175,11 @@ void FEC_CC_DecodeInput(uint8_t Input) {
   }
 }
 
-uint8_t FEC_CC_DecodeComplete(void) {
+FEC_Status FEC_CC_DecodeComplete(void) {
   if (CC.OutputLength == 0xffff)
-    return 1;
+    return FEC_OK;
   else
-    return 0;
+    return FEC_ERROR;
 }
 
 // RS Utility with padding and interleaving

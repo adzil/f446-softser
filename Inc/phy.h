@@ -16,15 +16,16 @@
 #include "crc16.h"
 #include "fec.h"
 
-#define PHY_BUFFER_SIZE 2048
-
-#define PHY_CC_ENCODE_LEN(LEN) (LEN * 4 + 3)
-#define PHY_CC_DECODE_LEN(LEN) ((LEN - 3) / 4)
+#define PHY_RX_BUFFER_SIZE 2048
+#define PHY_RCV_BUFFER_SIZE 1024;
+#define PHY_RCV_DECODE_BUFFER_SIZE 512;
 
 #define PHY_HEADER_LEN 4
-//#define PHY_HEADER_RS_LEN PHY_RS_OUTPUT_LEN(PHY_RS_N, PHY_RS_K, \
-//    PHY_HEADER_LEN)
-#define PHY_HEADER_CC_LEN PHY_CC_ENCODE_LEN(PHY_HEADER_LEN)
+
+typedef enum {
+  PHY_OK,
+  PHY_MEM_NOT_AVAIL
+}PHY_Status;
 
 typedef enum {
   PHY_RX_STATUS_RESET,
@@ -42,12 +43,8 @@ typedef struct {
   uint16_t ReceiveLen;
   uint16_t TotalLen;
   uint16_t PayloadLen;
-  struct {
-    uint8_t *ProcessData;
-    uint8_t *Data;
-    uint16_t ProcessLen;
-    uint16_t Len;
-  } Process;
+  uint8_t *RcvBuffer;
+  uint8_t *RcvDecodeBuffer;
   PHY_RX_StatusTypeDef Status;
 } PHY_RX_HandleTypeDef;
 
@@ -70,7 +67,7 @@ void PHY_RX_Thread(const void *argument);
 void PHY_TX_Thread(const void *argument);
 
 /* APIs */
-uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen);
+PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t DataLen);
 uint8_t PHY_API_DataReceived(uint8_t Data);
 
 #endif // __PHY

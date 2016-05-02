@@ -23,6 +23,11 @@
 #define FEC_RS_BUFFER_LEN(LEN) FEC_RS_DIV(FEC_RS_ENCODE_LEN(FEC_RS_MULT(LEN)))
 #define FEC_CC_BUFFER_LEN(LEN) (LEN * 4 + 3)
 
+typedef enum {
+  FEC_OK = 0x0,
+  FEC_ERROR = 0x1
+} FEC_Status;
+
 typedef struct {
   uint16_t *Distance;
   uint16_t *LastDistance;
@@ -39,7 +44,7 @@ void FEC_CC_Encode(uint8_t *Output, uint8_t *Input, uint16_t Length);
 void FEC_Init(void);
 void FEC_CC_DecodeInput(uint8_t Input);
 void FEC_CC_DecodeInit(uint8_t *Output, uint16_t Length);
-uint8_t FEC_CC_DecodeComplete(void);
+FEC_Status FEC_CC_DecodeComplete(void);
 
 void FEC_RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length);
 void FEC_RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length);

@@ -2,7 +2,9 @@
 
 PHY_HandleTypeDef PHY;
 
-uint8_t PHY_RX_MEM[PHY_BUFFER_SIZE];
+uint8_t PHY_RX_MEM[PHY_RX_BUFFER_SIZE];
+uint8_t PHY_RX_RcvBufferMEM[PHY_RCV_BUFFER_SIZE];
+uint8_t PHY_RX_RcvDecodeBufferMEM[PHY_RCV_DECODE_BUFFER_SIZE];
 
 /* OS Thread Handle */
 osThreadId PHY_RX_ThreadId;
@@ -12,42 +14,15 @@ osThreadDef(PHY_RX_Thread, osPriorityNormal, 1, 0);
 //osThreadDef(PHY_TX_Thread, osPriorityNormal, 1, 0);
 
 void PHY_Init(void) {
+  // Initialize forward error correctors
   FEC_Init();
-
-  BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
+  // Initialize buffer
+  BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_RX_BUFFER_SIZE);
+  PHY.RX.RcvBuffer = PHY_RX_RcvBufferMEM;
+  PHY.RX.RcvDecodeBuffer = PHY_RX_RcvDecodeBufferMEM;
   // Thread initialization
   PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
   //PHY_TX_ThreadId = osThreadCreate(osThread(PHY_TX_Thread), NULL);
-}
-
-uint8_t PHY_RX_SetProcess(uint16_t DataLen) {
-  uint8_t *Data;
-  uint16_t EncodeLen;
-
-  EncodeLen = PHY_CC_ENCODE_LEN(DataLen);
-
-  Data = MEM_Alloc(DataLen);
-  if (!Data) {
-    PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
-    return 0;
-  }
-
-  PHY.RX.Process.Data = Data;
-  PHY.RX.Process.ProcessData = Data;
-  PHY.RX.Process.Len = EncodeLen;
-  PHY.RX.Process.ProcessLen = EncodeLen;
-
-  return 1;
-}
-
-void PHY_RX_ClearProcess(void) {
-  if (PHY.RX.Process.ProcessData) {
-    MEM_Free(PHY.RX.Process.ProcessData);
-  }
-  PHY.RX.Process.Data = NULL;
-  PHY.RX.Process.ProcessData = NULL;
-  PHY.RX.Process.Len = 0;
-  PHY.RX.Process.ProcessLen = 0;
 }
 
 void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
@@ -67,31 +42,92 @@ void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
   }
 }
 
-uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
+void PHY_TX_CreateHeader(uint8_t *Header, uint16_t Length) {
   uint16_t Sum;
+
+  // Add length
+  *((uint16_t *) Header) = __REV16(Length);
+  // Calculate checksum
+  Sum = CRC_Checksum(Header, 2);
+  // Add checksum
+  *((uint16_t *) (Header + 2)) = __REV16(Sum);
+}
+
+PHY_Status PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
+  uint8_t *RSData;
+  uint8_t *CCData;
+  uint16_t RSLen;
+  uint16_t CCLen;
+
+  // Create RS data
+  RSLen = FEC_RS_BUFFER_LEN(Length);
+  RSData = MEM_Alloc(RSLen);
+  if (!RSData) {
+    return PHY_MEM_NOT_AVAIL;
+  }
+  FEC_RS_Encode(RSData, Input, Length);
+  // Create CC data
+  CCLen = FEC_CC_BUFFER_LEN(RSLen);
+  CCData = MEM_Alloc(CCLen);
+  if (!CCData) {
+    MEM_Free(RSData);
+    return PHY_MEM_NOT_AVAIL;
+  }
+  FEC_CC_Encode(CCData, RSData, RSLen);
+  // Free memory
+  MEM_Free(RSData);
+  MEM_Free(CCData);
+
+  return PHY_OK;
+}
+
+PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
+  uint8_t *RawHeader;
   uint8_t *Header;
-  uint16_t HeaderLen;
   uint8_t *Payload;
+  uint16_t HeaderLen;
   uint16_t PayloadLen;
 
-  // Packet creator
-  HeaderLen = PHY_HEADER_LEN;
-  Header = MEM_Alloc(PHY_HEADER_LEN);
-  *((uint16_t *)Header) = __REV16(DataLen);
-  // Do crc checksum
-  Sum = CRC_Checksum(Header, PHY_HEADER_LEN - 2);
-  *((uint16_t *)(Header + 2)) = __REV16(Sum);
-  // Encode
-  Header = PHY_CC_Encode(Header, &HeaderLen);
-  // Encode payload
-  PayloadLen = DataLen;
-  Payload = PHY_CC_Encode(Data, &PayloadLen);
+  // Create header
+  RawHeader = MEM_Alloc(PHY_HEADER_LEN);
+  if (!RawHeader) return PHY_MEM_NOT_AVAIL;
+  PHY_TX_CreateHeader(RawHeader, PHY_HEADER_LEN);
+  // Create encoded header
+  HeaderLen = FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
+  Header = MEM_Alloc(HeaderLen);
+  if (!Header) {
+    MEM_Free(RawHeader);
+    return PHY_MEM_NOT_AVAIL;
+  }
+  if (PHY_TX_EncodeData(Header, RawHeader, PHY_HEADER_LEN)) {
+    MEM_Free(RawHeader);
+    MEM_Free(Header);
+    return PHY_MEM_NOT_AVAIL;
+  }
+  MEM_Free(RawHeader);
+  // Create encoded data
+  PayloadLen = FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(Length));
+  Payload = MEM_Alloc(PayloadLen);
+  if (!Payload) {
+    MEM_Free(Header);
+    return PHY_MEM_NOT_AVAIL;
+  }
+  if (PHY_TX_EncodeData(Payload, Data, Length)) {
+    MEM_Free(Header);
+    MEM_Free(Payload);
+    return PHY_MEM_NOT_AVAIL;
+  }
 
-  DRV_API_SendStart(Header, HeaderLen, Payload, PayloadLen);
-  
+  // Retry send on error
+  while (DRV_API_SendStart(Header, HeaderLen, Payload, PayloadLen)) {
+    osThreadYield();
+  }
+
+  // Free memory
   MEM_Free(Header);
   MEM_Free(Payload);
-  return 0;
+
+  return PHY_OK;
 }
 
 uint8_t PHY_API_DataReceived(uint8_t Data) {
@@ -113,8 +149,6 @@ uint8_t PHY_API_DataReceived(uint8_t Data) {
 // Read data from Ring buffer and CC decode it
 void PHY_RX_Handler(void) {
   uint8_t *Buffer;
-  uint32_t Pop;
-  uint8_t Output;
   
   // Checks for buffer input
   Buffer = BUF_Read(&PHY.RX.Buffer);
@@ -127,49 +161,36 @@ void PHY_RX_Handler(void) {
 
   // Check for last status
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
-    //PHY_CC_DecodeReset();
-    // Set status to Header retrieval
-    if (!PHY_RX_SetProcess(PHY_HEADER_LEN)) return;
+    // Initialize for Header retrieval
+    FEC_CC_DecodeInit(PHY.RX.RcvBuffer, FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
     PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_HEADER);
   }
+
+  FEC_CC_DecodeInput(*Buffer);
   
-  PHY_CC_DecodeInput(*Buffer >> 4);
-  PHY_CC_DecodeInput(*Buffer & 0xf);
-  // Check for output
-  if (PHY_CC_DecodeOutput(&Output)) {
-    *(PHY.RX.Process.Data++) = Output;
-  }
-
-  if (!--PHY.RX.Process.Len) {
-    // Get leftover data
-    Pop = PHY_CC_DecodePop();
-    *(PHY.RX.Process.Data++) = (Pop >> 16) & 0xff;
-    *(PHY.RX.Process.Data++) = (Pop >> 8) & 0xff;
-    *(PHY.RX.Process.Data++) = Pop & 0xff;
-    PHY_CC_DecodeReset();
-
+  if (FEC_CC_DecodeComplete() == FEC_OK) {
     switch (PHY.RX.Status) {
       case PHY_RX_STATUS_PROCESS_HEADER:
-        // Process header
-        // Do CRC checking
-        if (CRC_Checksum(PHY.RX.Process.ProcessData,
-                         PHY.RX.Process.ProcessLen)) {
-          assert_user(0, "CRC Check failed");
+        FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer, PHY_HEADER_LEN);
+        if (CRC_Checksum(PHY.RX.RcvDecodeBuffer, PHY_HEADER_LEN)) {
           PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
           return;
         }
-        PHY.RX.PayloadLen = __REV16(*((uint16_t *)PHY.RX.Process.ProcessData));
-        PHY.RX.TotalLen = PHY_CC_ENCODE_LEN(PHY.RX.PayloadLen) + PHY_HEADER_CC_LEN;
-        // Reserve for payload
-        PHY_RX_ClearProcess();
-        if (!PHY_RX_SetProcess(PHY.RX.PayloadLen)) return;
-        PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_PAYLOAD);
+
+        PHY.RX.PayloadLen = __REV16(*((uint16_t *)PHY.RX.RcvDecodeBuffer));
+        PHY.RX.TotalLen =
+            FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN)) +
+            FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY.RX.PayloadLen));
+
+        FEC_CC_DecodeInit(PHY.RX.RcvBuffer,
+                          FEC_RS_BUFFER_LEN(PHY.RX.PayloadLen));
         break;
 
       case PHY_RX_STATUS_PROCESS_PAYLOAD:
-        HAL_UART_Transmit(&huart2, PHY.RX.Process.ProcessData,
+        FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer,
+                      PHY.RX.PayloadLen);
+        HAL_UART_Transmit(&huart2, PHY.RX.RcvDecodeBuffer,
                           PHY.RX.PayloadLen, 0xff);
-        PHY_RX_ClearProcess();
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
         break;
 
