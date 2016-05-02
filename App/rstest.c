@@ -1,11 +1,8 @@
 #include <stdio.h>
 #include <inttypes.h>
-#include <string.h>
 #include <stdlib.h>
 
 #include <rs.h>
-#include <nibble.h>
-#include <macros.h>
 
 int main(void) {
   // Initialize data

@@ -232,6 +232,16 @@ void PHY_RX_SetStatus(PHY_RX_StatusTypeDef Status) {
   }
 }
 
+// General purpose PHY packet encoder
+uint8_t PHY_EncodePacket(uint8_t *Input, uint8_t *Output, uint16_t DataLen) {
+  uint8_t *RSEncode;
+  uint16_t RSEncodeLen;
+
+  // Create memory for RS packet encoder
+  RSEncodeLen = __CEIL_DIV(RS_ENCODE_LEN(DataLen), 2);
+
+}
+
 uint8_t PHY_API_SendStart(uint8_t *Data, uint16_t DataLen) {
   uint16_t Sum;
   uint8_t *Header;
