@@ -67,6 +67,9 @@ void FEC_Init(void) {
   CC.LastDistance = FEC_CC_LastDistance_MEM;
   CC.Data = FEC_CC_Data_MEM;
   CC.LastData = FEC_CC_LastData_MEM;
+
+  // Initialize RS
+  INIT_RS(4, 0x13, 1, 1, 8);
 }
 
 void FEC_CC_DecodeInit(uint8_t *Output, uint16_t Length) {

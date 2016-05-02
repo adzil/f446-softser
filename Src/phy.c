@@ -14,9 +14,6 @@ osThreadDef(PHY_RX_Thread, osPriorityNormal, 1, 0);
 void PHY_Init(void) {
   FEC_Init();
 
-  // Initialize RS
-  INIT_RS(4, 0x13, 1, 1, 8);
-
   BUF_Init(&PHY.RX.Buffer, PHY_RX_MEM, 1, PHY_BUFFER_SIZE);
   // Thread initialization
   PHY_RX_ThreadId = osThreadCreate(osThread(PHY_RX_Thread), NULL);
