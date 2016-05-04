@@ -9,10 +9,12 @@ file(GLOB SOURCE_FILES Src/*.c)
 file(GLOB HEADER_FILES Inc/*.h)
 
 add_executable(f446_softser ${SOURCE_FILES} ${HEADER_FILES})
-add_executable(rstest App/rstest.c Src/rs.c App/memory-os.c)
 add_executable(cctest App/cctest.c Src/fec.c Src/rs.c App/memory-os.c)
+add_executable(ptrtest App/ptrtest.c App/memory-os.c App/bitrev.h Src/mac.c
+        Src/crc16.c)
 
 # Include directories
+include_directories(App)
 include_directories(Inc)
 include_directories(Drivers/STM32F4xx_HAL_Driver/Inc)
 include_directories(Drivers/STM32F4xx_HAL_Driver/Inc/Legacy)
@@ -25,4 +27,7 @@ include_directories(C:\\Keil_v5\\ARM\\PACK\\ARM\\CMSIS\\4.5.0\\CMSIS\\RTOS\\RTX\
 include_directories(C:\\Keil_v5\\ARM\\PACK\\Keil\\STM32F4xx_DFP\\2.7.0\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include)
 
 # Definitions for STM32 libraries
-add_definitions(-D__UVISION_VERSION="518" -D_RTE_ -DSTM32F446xx -DUSE_HAL_DRIVER -DSTM32F446xx)
+add_definitions(-D__UVISION_VERSION="518" -D_RTE_ -DSTM32F446xx
+        -DUSE_HAL_DRIVER -DSTM32F446xx)
+
+target_compile_options(ptrtest PUBLIC -fshort-enums)
