@@ -56,18 +56,20 @@ MAC_Frame *MAC_FrameDecode(uint8_t *Data, uint16_t Len) {
   if (CRC_Checksum(Data, Len))
     return NULL;
   // Get the frame control
-  FrameControl = *((MAC_FrameControl *)(Data++));
+  FromBuffer(&FrameControl, Data);
   // Calculate the address length
-  Start = sizeof(MAC_FrameControl) +
-      sizeof(uint8_t) +
+  Start = struct_size(MAC_Frame, FrameControl) +
+      struct_size(MAC_Frame, Sequence) +
       MAC_AddressLength(FrameControl.DestinationAddressMode) +
       MAC_AddressLength(FrameControl.SourceAddressMode);
-  Length = Len - (Start + sizeof(uint16_t));
+  Length = Len - (Start + struct_size(MAC_Frame, FCS));
   // Check for length error
   if (Length < 0) {
     return NULL;
   }
   // No error on the data, continue allocating buffer
+  // TODO: The length property should only be available when the packet type
+  // is data.
   F = MAC_FrameAlloc(Length);
   if (!F) return NULL;
   // Copy the start and length number
@@ -75,40 +77,57 @@ MAC_Frame *MAC_FrameDecode(uint8_t *Data, uint16_t Len) {
   F->Payload.Length = Length;
   // Copy the frame control and sequence number
   F->FrameControl = FrameControl;
-  F->Sequence = *(Data++);
+  FromBuffer(&F->Sequence, Data);
   // Get the address field
   if (F->FrameControl.DestinationAddressMode == MAC_ADDRESS_SHORT) {
-    F->Address.Destination.Short = __REV16(*(uint16_t *) Data);
-    Data += sizeof(uint16_t);
+    FromBuffer(&F->Address.Destination.Short, Data);
   } else if (F->FrameControl.DestinationAddressMode == MAC_ADDRESS_EXTENDED) {
-    F->Address.Destination.Extended = __REV(*(uint32_t *) Data);
-    Data += sizeof(uint32_t);
-  } else {
-    F->Address.Destination.Extended = 0;
+    FromBuffer(&F->Address.Destination.Extended, Data);
   }
+
   if (F->FrameControl.SourceAddressMode == MAC_ADDRESS_SHORT) {
-    F->Address.Source.Short = __REV16(*(uint16_t *) Data);
-    Data += sizeof(uint16_t);
+    FromBuffer(&F->Address.Source.Short, Data);
   } else if (F->FrameControl.SourceAddressMode == MAC_ADDRESS_EXTENDED) {
-    F->Address.Source.Extended = __REV(*(uint32_t *) Data);
-    Data += sizeof(uint32_t);
-  } else {
-    F->Address.Source.Extended = 0;
+    FromBuffer(&F->Address.Source.Extended, Data);
   }
+
   // Get payload data
-  if (F->Payload.Length > 0) {
-    memcpy(F->Payload.Data, Data, F->Payload.Length);
+  switch (F->FrameControl.FrameType) {
+    case MAC_FRAME_TYPE_BEACON:
+      FromBuffer(&F->Payload.Beacon, Data);
+      break;
+
+    case MAC_FRAME_TYPE_COMMAND:
+      FromBuffer(&F->Payload.Command.CommandFrameId, Data);
+      switch (F->Payload.Command.CommandFrameId) {
+        case MAC_COMMAND_ASSOC_RESPONSE:
+          FromBuffer(&F->Payload.Command.ShortAddress, Data);
+          FromBuffer(&F->Payload.Command.Status, Data);
+          break;
+
+        default:
+          break;
+      }
+      break;
+
+    case MAC_FRAME_TYPE_DATA:
+      if (F->Payload.Length > 0)
+        memcpy(F->Payload.Data, Data, F->Payload.Length);
+      break;
+
+    default:
+      break;
   }
 
   return F;
 }
 
 uint16_t MAC_FrameEncodeLen(MAC_Frame *F) {
-  F->Payload.Start = sizeof(MAC_FrameControl) +
-                     sizeof(uint8_t) +
+  F->Payload.Start = struct_size(MAC_Frame, FrameControl) +
+                     struct_size(MAC_Frame, Sequence) +
                      MAC_AddressLength(F->FrameControl.DestinationAddressMode) +
                      MAC_AddressLength(F->FrameControl.SourceAddressMode);
-  return F->Payload.Start + F->Payload.Length + sizeof(uint16_t);
+  return F->Payload.Start + F->Payload.Length + struct_size(MAC_Frame, FCS);
 }
 
 // This function will convert MAC_Frame to data stream
@@ -156,4 +175,15 @@ MAC_Status MAC_FrameEncode(MAC_Frame *F, uint8_t *Data) {
   MAC_FrameFree(F);
 
   return MAC_OK;
+}
+
+void MAC_API_FrameReceived(uint8_t *Data, uint16_t Len) {
+  MAC_Frame *F;
+
+  // Decode the frame
+  F = MAC_FrameDecode(Data, Len);
+  // Do nothing if frame is not decoded properly
+  if (!F) return;
+
+
 }

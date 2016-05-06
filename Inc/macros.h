@@ -9,6 +9,38 @@
 #define __CEIL_DIV(a, b) ((a + b - 1) / b)
 #define _inline_ __attribute__((always_inline)) static inline
 
+#define struct_size(STRUCT, MEMBER) sizeof(((STRUCT *)0)->MEMBER)
+
+// Reverse endian-ness
+#define __GENTYPE(DATA, SIZE) (\
+(SIZE == 4) ? *((uint32_t *) DATA) : (\
+(SIZE == 2) ? *((uint16_t *) DATA) : \
+*((uint8_t *) DATA)  									))
+
+#define __GENREV(DATA, SIZE) (\
+(SIZE == 4) ? __REV(__GENTYPE(DATA, SIZE)) : (\
+(SIZE == 2) ? __REV16(__GENTYPE(DATA, SIZE)) :\
+__GENTYPE(DATA, SIZE)													))
+
+#define __GENOP(DST, SRC, SIZE) do {\
+if (SIZE == 4) *((uint32_t *) DST) = __GENREV(SRC, SIZE);\
+else if (SIZE == 2) *((uint16_t *) DST) = __GENREV(SRC, SIZE);\
+else *((uint8_t *) DST) = __GENREV(SRC, SIZE);\
+} while(0)
+
+// Copy memory contents to buffer
+#define __ToBuffer(DST, SRC, SIZE) do {\
+__GENOP(DST, SRC, SIZE);\
+DST += SIZE;\
+} while(0)
+#define ToBuffer(DST, SRC) __ToBuffer(DST, SRC, sizeof(*SRC));
+
+#define __FromBuffer(DST, SRC, SIZE) do {\
+__GENOP(DST, SRC, SIZE);\
+SRC += SIZE;\
+} while(0)
+#define FromBuffer(DST, SRC) __FromBuffer(DST, SRC, sizeof(*DST));
+
 _inline_ uint8_t __popcnt8(uint8_t in) {
 	in -= (in >> 1) & 0x55;
 	in = (in & 0x33) + ((in >> 2) & 0x33);
