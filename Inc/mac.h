@@ -103,7 +103,6 @@ typedef struct {
 typedef struct {
   MAC_AddressField Address;
   MAC_FramePayload Payload;
-  uint16_t FCS;
   MAC_FrameControl FrameControl;
   uint8_t Sequence;
 } MAC_Frame;

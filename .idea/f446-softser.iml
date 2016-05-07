@@ -22,23 +22,23 @@
       <sourceFolder url="file://$MODULE_DIR$/App/bitrev.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/phy.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/rs.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/macros.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/fec.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/mxconstants.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/rs.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/crc16.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/drv.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/buffer.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_it.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/tim.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/mac.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/nibble.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_hal_conf.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/crc16.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/drv.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/lock.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/usart.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_it.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/memory.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/debug.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Inc/gpio.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Inc/usart.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/stm32f4xx_hal_conf.h" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
