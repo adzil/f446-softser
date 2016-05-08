@@ -105,7 +105,7 @@ void blinkLED(void const *argument) {
 void checkButton(void const *argument) {
   while (1) {
     // Always send data
-    PHY_API_SendStart(TXData, sizeof(TXData) - 1);
+    //PHY_API_SendStart(TXData, sizeof(TXData) - 1);
     /*
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
@@ -149,8 +149,6 @@ int main(void)
       "Project\r\n---\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
 //#endif
-  // Initialize PNRG
-  RND_Init();
   // Initialize Optical Driver
   DRV_Init();
   // Initialize Memory
@@ -172,12 +170,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    osDelay(500);
+    osDelay(1000);
     osSignalSet(tid_blinkLED, 0x0001);
-
-    // Send random number
-    sprintf(Buf, "Random number is: %ld\r\n", RND_Get());
-    HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
   }
   /* USER CODE END WHILE */
 

@@ -47,6 +47,7 @@ extern TIM_HandleTypeDef htim3;
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
 /******************************************************************************/
 
+#if 0
 /**
 * @brief This function handles System tick timer.
 */
@@ -61,6 +62,7 @@ void SysTick_Handler(void)
 
   /* USER CODE END SysTick_IRQn 1 */
 }
+#endif
 
 /******************************************************************************/
 /* STM32F4xx Peripheral Interrupt Handlers                                    */

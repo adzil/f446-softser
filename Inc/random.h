@@ -7,7 +7,6 @@
 #include "stm32f4xx_hal.h"
 #include "adc.h"
 
-void RND_Init(void);
-uint32_t RND_Get(void);
+uint8_t RND_Get(void);
 
 #endif // __RANDOM__

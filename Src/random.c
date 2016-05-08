@@ -4,27 +4,21 @@
 
 LOCK_Handle RND_Lock;
 
-void RND_Init(void) {
-  int i;
-  uint32_t Seed;
-
-  Seed = 0;
-  HAL_ADC_Start(&hadc1);
-  for (i = 0; i < 8; i++) {
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    Seed = (Seed << 4) | (HAL_ADC_GetValue(&hadc1) & 0xf);
-  }
-  HAL_ADC_Stop(&hadc1);
-  // Set random seed value
-  srand(Seed);
-}
-
-uint32_t RND_Get(void) {
+uint8_t RND_Get(void) {
+	int i;
   uint32_t RndVal;
 
+  RndVal = 0;
   LOCK_Start(&RND_Lock);
-  RndVal = (uint32_t) rand();
+	
+  HAL_ADC_Start(&hadc1);
+  for (i = 0; i < 4; i++) {
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    RndVal = (RndVal << 2) | (HAL_ADC_GetValue(&hadc1) & 0x3);
+  }
+  HAL_ADC_Stop(&hadc1);
+	
   LOCK_End(&RND_Lock);
 
-  return RndVal;
+  return (uint8_t)(RndVal & 0xff);
 }
