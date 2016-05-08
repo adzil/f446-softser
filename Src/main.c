@@ -32,19 +32,19 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#include "adc.h"
+#include "crc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
 #include <string.h>
 #include "cmsis_os.h"
 #include "macros.h"
 #include "drv.h"
-#include "memory.h"
+#include "random.h"
 #include "phy.h"
-#include "stm32f4xx.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -105,10 +105,13 @@ void blinkLED(void const *argument) {
 
 void checkButton(void const *argument) {
   while (1) {
+    // Always send data
+    PHY_API_SendStart(TXData, sizeof(TXData) - 1);
+    /*
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
       osDelay(200);
-    }
+    }*/
   }
 }
 
@@ -138,6 +141,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
+  MX_ADC1_Init();
+  MX_CRC_Init();
 
   /* USER CODE BEGIN 2 */
 //#ifdef  USE_FULL_ASSERT
@@ -146,6 +151,8 @@ int main(void)
       "Project\r\n---\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
 //#endif
+  // Initialize PNRG
+  RND_Init();
   // Initialize Optical Driver
   DRV_Init();
   // Initialize Memory
@@ -167,14 +174,12 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    //osDelay(100);
-    PHY_API_SendStart(TXData, sizeof(TXData) - 1);
+    osDelay(500);
     osSignalSet(tid_blinkLED, 0x0001);
 
-#ifdef  USE_FULL_ASSERT
-    // Check for os
-    assert_user((osKernelRunning()), "RTX Kernel is not running.");
-#endif
+    // Send random number
+    sprintf(Buf, "Random number is: %ld\r\n", RND_Get());
+    HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
   }
   /* USER CODE END WHILE */
 
@@ -236,10 +241,8 @@ void SystemClock_Config(void)
    * @param line: assert_param error line source number
    * @retval None
    */
-void assert_failed(uint8_t* file, uint32_t line, const char *msg)
+void assert_failed(uint8_t* file, uint32_t line)
 {
-  sprintf(Buf, "(%s:%d) %s\r\n", file, line, msg);
-  HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xff);
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

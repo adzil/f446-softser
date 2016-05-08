@@ -252,5 +252,31 @@ void MAC_API_FrameReceived(uint8_t *Data, uint16_t Len) {
   // Do nothing if frame is not decoded properly
   if (!F) return;
 
+  // Populate MAC frame by frame type
+  switch (F->FrameControl.FrameType) {
+    case MAC_FRAME_TYPE_DATA:
+      // Should give data to next higher layer
+      break;
 
+    case MAC_FRAME_TYPE_ACK:
+      // Call function to check the frame sequence
+      break;
+
+    case MAC_FRAME_TYPE_BEACON:
+      // Check for VPAN coordinator field
+      if (F->Payload.Beacon.VPANCoordinator == MAC_VPAN_COORDINATOR) {
+        // Add to scan list (if the device is not coordinator)
+      }
+      break;
+
+    case MAC_FRAME_TYPE_COMMAND:
+      // Check for command input
+      break;
+
+    default:
+      break;
+  }
+
+  // Clean up the frame buffer
+  MAC_FrameFree(F);
 }
