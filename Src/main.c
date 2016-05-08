@@ -33,7 +33,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "adc.h"
-#include "crc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -142,7 +141,6 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_ADC1_Init();
-  MX_CRC_Init();
 
   /* USER CODE BEGIN 2 */
 //#ifdef  USE_FULL_ASSERT
