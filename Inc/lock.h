@@ -5,36 +5,15 @@
 #ifndef __LOCK
 #define __LOCK
 
-#include <stm32f4xx.h>
 #include "macros.h"
+#ifndef APP_DEBUG
+#include <stm32f4xx.h>
 #include "cmsis_os.h"
+#endif
 
 typedef volatile uint8_t LOCK_Handle;
-/*
-_inline_ uint8_t LOCK_ReadB(uint8_t *Address) {
-  return __LDREXB(Address);
-}
 
-_inline_ uint16_t LOCK_ReadH(uint16_t *Address) {
-  return __LDREXH(Address);
-}
-
-_inline_ uint32_t LOCK_ReadW(uint32_t *Address) {
-  return __LDREXW(Address);
-}
-
-_inline_ void LOCK_WriteB(uint8_t Data, uint8_t *Address) {
-  while(__STREXB(Data, Address));
-}
-
-_inline_ void LOCK_WriteH(uint16_t Data, uint16_t *Address) {
-  while(__STREXH(Data, Address));
-}
-
-_inline_ void LOCK_WriteW(uint32_t Data, uint32_t *Address) {
-  while(__STREXW(Data, Address));
-}
-*/
+#ifndef APP_DEBUG
 _inline_ void LOCK_Start(LOCK_Handle *Lock) {
   uint8_t Status = 0;
 
@@ -57,5 +36,14 @@ _inline_ void LOCK_End(LOCK_Handle *Lock) {
   // Release lock
   *Lock = 0;
 }
+#else
+_inline_ void LOCK_Start(LOCK_Handle *Lock) {
+  *Lock = 1;
+}
+
+_inline_ void LOCK_End(LOCK_Handle *Lock) {
+  *Lock = 0;
+}
+#endif
 
 #endif //F446_SOFTSER_LOCK_H

@@ -1,12 +1,11 @@
 #ifndef __MAC__
 #define __MAC__
 
-#define APP_DEBUG
-
 #include <inttypes.h>
 #include <string.h>
 #include "memory.h"
 #include "macros.h"
+#include "queue.h"
 #ifdef APP_DEBUG
 #include "bitrev.h"
 #else
@@ -14,12 +13,26 @@
 #endif
 #include "crc16.h"
 
+// MAC Constants
+#define MAC_EXTENDED_ADDRESS 0x12345678
+#define MAC_ACK_WAIT_DURATION 100 // in ms
+#define MAC_BACKOFF_DURATION ((uint32_t) (RND_Get() & 0x1f) * 20)
+#define MAC_ACK_MAX_RETRIES 3
+#define MAC_QUEUE_SIZE 5
+#define MAC_DEVICE_ADDRESS_SIZE 10
+
+#define MAC_ADDRESS_UNKNOWN 0xffff
+#define MAC_USE_EXTENDED_ADDRESS 0xfffe
+
 typedef enum {
   MAC_OK,
   MAC_INVALID_CHECKSUM,
   MAC_MEM_NOT_AVAIL,
   MAC_INVALID_FRAME_LENGTH,
-  MAC_INVALID_ROUTINE
+  MAC_INVALID_ROUTINE,
+  MAC_INVALID_ADDRESSING,
+  MAC_INVALID_DEVICE_ADDRESS,
+  MAC_QUEUE_FULL
 } MAC_Status;
 
 typedef enum {
@@ -61,6 +74,21 @@ typedef enum {
   MAC_VPAN_DEVICE = 0x00,
   MAC_VPAN_COORDINATOR = 0x01,
 } MAC_VPANCoordinator;
+
+typedef enum {
+  MAC_NOT_ASSOCIATED = 0x00,
+  MAC_ASSOCIATED = 0x01
+} MAC_AssociatedCoord;
+
+typedef struct {
+  MAC_AssociatedCoord AssociatedCoord;
+  MAC_VPANCoordinator VPANCoordinator;
+  uint32_t CoordExtendedAddress;
+  uint16_t CoordShortAddress;
+  uint8_t DSN;
+  uint8_t BSN;
+  uint16_t ShortAddress;
+} MAC_PIB;
 
 typedef struct {
   MAC_AddressMode DestinationAddressMode  : 2;
@@ -107,11 +135,53 @@ typedef struct {
   uint8_t Sequence;
 } MAC_Frame;
 
+typedef struct {
+  uint8_t *Content;
+  uint16_t Length;
+} MAC_RawData;
+
+typedef struct {
+  QUE_Pool RX;
+  QUE_Pool TX;
+} MAC_Queue;
+
+typedef struct {
+  uint32_t ExtendedAddress;
+  uint16_t ShortAddress;
+} MAC_DeviceAddress;
+
+typedef enum {
+  MAC_TRANSMISSION_RESET,
+  MAC_TRANSMISSION_BACKOFF,
+  MAC_TRANSMISSION_WAIT_ACK,
+  MAC_TRANSMISSION_WAIT_RESET,
+  MAC_TRANSMISSION_RETRY
+} MAC_TransmissionStatus;
+
+typedef struct {
+  QUE_Item *Item;
+  uint8_t Retries;
+  MAC_TransmissionStatus Status;
+  uint32_t TickStart;
+  uint32_t TickLength;
+} MAC_Transmission;
+
+typedef struct {
+  MAC_PIB PIB;
+  MAC_Queue Queue;
+  MAC_Transmission Transmission;
+  MAC_DeviceAddress *Devices;
+} MAC_Handle;
+
+void MAC_Init(void);
 MAC_Frame *MAC_FrameAlloc(uint16_t PayloadLen);
 MAC_Status MAC_FrameFree(MAC_Frame *F);
 uint16_t MAC_FrameEncodeLen(MAC_Frame *F);
 MAC_Frame *MAC_FrameDecode(uint8_t *Data, uint16_t Len);
 MAC_Status MAC_FrameEncode(MAC_Frame *F, uint8_t *Data);
+
+// API for PHY layer
+MAC_Status MAC_API_DataReceived(uint8_t *Data, uint16_t Length);
 
 
 #endif // __MAC__

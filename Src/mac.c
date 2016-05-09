@@ -1,4 +1,12 @@
 #include <mac.h>
+#include "random.h"
+
+MAC_Handle MAC;
+
+QUE_Item MAC_RXQueueItem[MAC_QUEUE_SIZE], MAC_TXQueueItem[MAC_QUEUE_SIZE];
+MAC_RawData MAC_RXQueueData[MAC_QUEUE_SIZE];
+MAC_Frame MAC_TXQueueData[MAC_QUEUE_SIZE];
+MAC_DeviceAddress MAC_DeviceAddressMEM[MAC_DEVICE_ADDRESS_SIZE];
 
 _inline_ uint16_t MAC_AddressLength(MAC_AddressMode Mode) {
   if (Mode == MAC_ADDRESS_SHORT)
@@ -7,6 +15,56 @@ _inline_ uint16_t MAC_AddressLength(MAC_AddressMode Mode) {
     return sizeof(uint32_t);
   else
     return 0;
+}
+
+MAC_Status MAC_DevicesCheck(uint16_t Address) {
+  int i;
+
+  for (i = 0; i < MAC_DEVICE_ADDRESS_SIZE; i++) {
+    if (MAC.Devices[i].ShortAddress == Address)
+      return MAC_OK;
+  }
+
+  return MAC_INVALID_DEVICE_ADDRESS;
+}
+
+// TODO: Create mechanism to delete unusued devices
+uint16_t MAC_DevicesAdd(uint32_t ExtendedAddress) {
+  uint16_t Address;
+  int i;
+
+  // Checks if the extended address is already in the list
+  for (i = 0; i < MAC_DEVICE_ADDRESS_SIZE; i++) {
+    if (MAC.Devices[i].ExtendedAddress == ExtendedAddress)
+      return MAC.Devices[i].ShortAddress;
+  }
+
+  // Generate new short address
+  do {
+    Address = (RND_Get() << 8) | RND_Get();
+  } while (MAC_DevicesCheck(Address) == MAC_OK);
+
+  // Store in address list
+  for (i = 0; i < MAC_DEVICE_ADDRESS_SIZE; i++) {
+    if (MAC.Devices[i].ShortAddress == MAC_ADDRESS_UNKNOWN) {
+      MAC.Devices[i].ShortAddress = Address;
+      MAC.Devices[i].ExtendedAddress = ExtendedAddress;
+      return Address;
+    }
+  }
+
+  // No more address list space
+  return MAC_ADDRESS_UNKNOWN;
+}
+
+MAC_Status MAC_DataFrameAlloc(MAC_Frame *F, uint16_t PayloadLen) {
+  F->Payload.Data = MEM_Alloc(PayloadLen);
+  if (!F->Payload.Data) {
+    return MAC_MEM_NOT_AVAIL;
+  }
+  F->Payload.Length = PayloadLen;
+
+  return MAC_OK;
 }
 
 // This function will create the MAC Frame
@@ -19,14 +77,10 @@ MAC_Frame *MAC_FrameAlloc(uint16_t PayloadLen) {
     return NULL;
   // Allocate buffer for payload if required
   if (PayloadLen) {
-    F->Payload.Data = MEM_Alloc(PayloadLen);
-    if (!F->Payload.Data) {
+    if (MAC_DataFrameAlloc(F, PayloadLen) != MAC_OK) {
       MEM_Free(F);
       return NULL;
     }
-    F->Payload.Length = PayloadLen;
-  } else {
-    F->Payload.Data = NULL;
   }
   // Zero out the start payload
   F->Payload.Start = 0;
@@ -186,7 +240,24 @@ MAC_Status MAC_FrameEncode(MAC_Frame *F, uint8_t *Data) {
   Len = F->Payload.Start + F->Payload.Length;
   // Start writing frame control and sequence number
   ByteToBuffer(Data, &F->FrameControl);
-  ByteToBuffer(Data, &F->Sequence);
+  // Send sequence number based on the frame type
+  // The data and command frame will use DSN and beacon frame will use BSN
+  // ACK frame should be loaded manually using to be acknowledged frame
+  switch (F->FrameControl.FrameType) {
+    case MAC_FRAME_TYPE_COMMAND:
+    case MAC_FRAME_TYPE_DATA:
+      ByteToBuffer(Data, &MAC.PIB.DSN);
+      MAC.PIB.DSN++;
+      break;
+
+    case MAC_FRAME_TYPE_BEACON:
+      ByteToBuffer(Data, &MAC.PIB.BSN);
+      MAC.PIB.BSN++;
+      break;
+
+    case MAC_FRAME_TYPE_ACK:
+      ByteToBuffer(Data, &F->Sequence);
+  }
 
   // Set addressing data
   switch(F->FrameControl.DestinationAddressMode) {
@@ -244,6 +315,157 @@ MAC_Status MAC_FrameEncode(MAC_Frame *F, uint8_t *Data) {
   return MAC_OK;
 }
 
+MAC_Status MAC_CheckFrameAddressing(MAC_Frame *F) {
+  switch (F->FrameControl.FrameType) {
+    case MAC_FRAME_TYPE_DATA:
+    case MAC_FRAME_TYPE_COMMAND:
+      // Check for destination address
+      switch (F->FrameControl.DestinationAddressMode) {
+        // Frame is using destination short address
+        case MAC_ADDRESS_SHORT:
+          // Only use short address if the device had one
+          if (MAC.PIB.ShortAddress != MAC_ADDRESS_UNKNOWN &&
+              MAC.PIB.ShortAddress != MAC_USE_EXTENDED_ADDRESS)
+            if (F->Address.Destination.Short == MAC.PIB.ShortAddress)
+              return MAC_OK;
+          // Not good, return addressing error
+          return MAC_INVALID_ADDRESSING;
+
+        case MAC_ADDRESS_EXTENDED:
+          // Checks if the extended address is same with the device
+          if (F->Address.Destination.Extended == MAC_EXTENDED_ADDRESS)
+            return MAC_OK;
+          // Ooops invalid address
+          return MAC_INVALID_ADDRESSING;
+
+        default:
+          break;
+      }
+
+      // No destination address, this is special case only for coordinator
+      if (MAC.PIB.VPANCoordinator == MAC_VPAN_COORDINATOR) {
+        // Check the source address
+        switch (F->FrameControl.SourceAddressMode) {
+          case MAC_ADDRESS_EXTENDED:
+            // Always allow extended source address
+            return MAC_OK;
+
+          case MAC_ADDRESS_SHORT:
+            // The source short address must be validated against the device
+            // address list
+            if (MAC_DevicesCheck(F->Address.Source.Short) == MAC_OK)
+              return MAC_OK;
+            // Invalid source short address, oops
+            break;
+
+          default:
+            // WTF is this unknown frame
+            break;
+        }
+      }
+      // Addressing error
+      return MAC_INVALID_ADDRESSING;
+
+    case MAC_FRAME_TYPE_ACK:
+      // Always allow acknowledgement frame
+      return MAC_OK;
+
+    case MAC_FRAME_TYPE_BEACON:
+      // Only allow beacon on device only
+      if (MAC.PIB.VPANCoordinator == MAC_VPAN_DEVICE)
+        return MAC_OK;
+
+      return MAC_INVALID_ADDRESSING;
+  }
+
+  // OMG what is this frame
+  return MAC_INVALID_ADDRESSING;
+}
+
+void MAC_AckReceived(MAC_Frame *Ack) {
+  MAC_Frame *F;
+
+  // No waiting frame, just go on
+  if (MAC.Transmission.Status != MAC_TRANSMISSION_WAIT_ACK) return;
+  // Load the mac frame from item
+  F = (MAC_Frame *) MAC.Transmission.Item->Data;
+  // Checks for sequence number
+  if (F->Sequence == Ack->Sequence) {
+    // TODO: Acknowledge success callback
+    // Reset the transmission
+    MAC.Transmission.Status = MAC_TRANSMISSION_WAIT_RESET;
+  }
+}
+
+void MAC_PollTransmission(void) {
+  QUE_Item *Item;
+  MAC_Frame *F;
+
+  switch (MAC.Transmission.Status) {
+    case MAC_TRANSMISSION_WAIT_RESET:
+      QUE_GetCommit(&MAC.Queue.TX, MAC.Transmission.Item);
+      MAC.Transmission.Status = MAC_TRANSMISSION_RESET;
+
+    case MAC_TRANSMISSION_RESET:
+      // Try to get item in queue
+      Item = QUE_Get(&MAC.Queue.TX);
+      // If there is no queue then there's nothing to do
+      if (!Item) return;
+      // Load the item to the transmission item
+      MAC.Transmission.Item = Item;
+      // Reload retry count
+      MAC.Transmission.Retries = 0;
+
+    case MAC_TRANSMISSION_RETRY:
+      // Randomize transfer time
+      MAC.Transmission.TickStart = HAL_GetTick();
+      MAC.Transmission.TickLength = MAC_BACKOFF_DURATION;
+      MAC.Transmission.Status = MAC_TRANSMISSION_BACKOFF;
+
+    default:
+      break;
+  }
+
+  // Check if the the timer has elapsed
+  if (MAC.Transmission.TickLength <
+      HAL_GetTick() - MAC.Transmission.TickStart) {
+    // Update the tick start
+    MAC.Transmission.TickStart = HAL_GetTick();
+    // Load the frame
+    F = (MAC_Frame *) MAC.Transmission.Item->Data;
+
+    switch (MAC.Transmission.Status) {
+      case MAC_TRANSMISSION_BACKOFF:
+        // TODO: Send the data
+        // Checks if the data transmission needs acknowledgement
+        if (F->FrameControl.AckRequest == MAC_ACK) {
+          // Set new tick length value for wait duration
+          MAC.Transmission.TickLength = MAC_ACK_WAIT_DURATION;
+          MAC.Transmission.Status = MAC_TRANSMISSION_WAIT_ACK;
+        } else {
+          // Reset the transmission
+          MAC.Transmission.Status = MAC_TRANSMISSION_WAIT_RESET;
+        }
+        break;
+
+      case MAC_TRANSMISSION_WAIT_ACK:
+        // Check for number of retries
+        if (++MAC.Transmission.Retries >= MAC_ACK_MAX_RETRIES) {
+          // TODO: Acknowledge callback error
+          // Reset the transmission
+          MAC.Transmission.Status = MAC_TRANSMISSION_WAIT_RESET;
+        } else {
+          // Retry the transmission
+          MAC.Transmission.Status = MAC_TRANSMISSION_RETRY;
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+}
+
 void MAC_API_FrameReceived(uint8_t *Data, uint16_t Len) {
   MAC_Frame *F;
 
@@ -251,6 +473,26 @@ void MAC_API_FrameReceived(uint8_t *Data, uint16_t Len) {
   F = MAC_FrameDecode(Data, Len);
   // Do nothing if frame is not decoded properly
   if (!F) return;
+
+  // Check for MAC addressing
+  if (MAC_CheckFrameAddressing(F) == MAC_OK) {
+    // TODO: Check for acknowledgement from other device
+    // TODO: Send for acknowledgement if requested
+
+  }
+
+  // Check for acknowledgement request
+  switch (F->FrameControl.FrameType) {
+    case MAC_FRAME_TYPE_DATA:
+    case MAC_FRAME_TYPE_COMMAND:
+      if (F->FrameControl.AckRequest == MAC_ACK) {
+        // Send back acknowledgement frame
+      }
+      break;
+
+    default:
+      break;
+  }
 
   // Populate MAC frame by frame type
   switch (F->FrameControl.FrameType) {
@@ -279,4 +521,59 @@ void MAC_API_FrameReceived(uint8_t *Data, uint16_t Len) {
 
   // Clean up the frame buffer
   MAC_FrameFree(F);
+}
+
+void MAC_PIB_Reset(void) {
+  // Preload MAC sequence
+  MAC.PIB.DSN = RND_Get();
+  MAC.PIB.BSN = RND_Get();
+  // Reset association status
+  MAC.PIB.AssociatedCoord = MAC_NOT_ASSOCIATED;
+  // Reset coordinator address
+  MAC.PIB.CoordShortAddress = MAC_ADDRESS_UNKNOWN;
+  MAC.PIB.CoordExtendedAddress = 0;
+  // Reset device address
+  MAC.PIB.ShortAddress = MAC_ADDRESS_UNKNOWN;
+  // Set device type
+  MAC.PIB.VPANCoordinator = MAC_VPAN_COORDINATOR;
+}
+
+MAC_Status MAC_API_DataReceived(uint8_t *Data, uint16_t Length) {
+  QUE_Item *Item;
+  MAC_RawData *RawData;
+
+  // Get the pool item
+  Item = QUE_Put(&MAC.Queue.RX);
+  if (!Item)
+    return MAC_QUEUE_FULL;
+  // Get the raw data handle
+  RawData = (MAC_RawData *) Item->Data;
+  // Fill the raw data
+  RawData->Content = Data;
+  RawData->Length = Length;
+  // Commit the queue insertion
+  QUE_PutCommit(&MAC.Queue.RX, Item);
+}
+
+void MAC_DevicesInit(void) {
+  int i;
+
+  MAC.Devices = MAC_DeviceAddressMEM;
+  for (i = 0; i < MAC_DEVICE_ADDRESS_SIZE; i++) {
+    MAC.Devices[i].ShortAddress = MAC_ADDRESS_UNKNOWN;
+  }
+}
+
+void MAC_Init(void) {
+  // Reset PIB values
+  MAC_PIB_Reset();
+  // Initialize queue
+  QUE_InitData(MAC_RXQueueItem, MAC_RXQueueData, sizeof(MAC_RawData),
+               MAC_QUEUE_SIZE);
+  QUE_InitData(MAC_TXQueueItem, MAC_TXQueueData, sizeof(MAC_Frame),
+               MAC_QUEUE_SIZE);
+  QUE_Init(&MAC.Queue.RX, MAC_RXQueueItem, MAC_QUEUE_SIZE);
+  QUE_Init(&MAC.Queue.TX, MAC_TXQueueItem, MAC_QUEUE_SIZE);
+  // Initialize device address list
+  MAC_DevicesInit();
 }

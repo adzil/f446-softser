@@ -12,6 +12,7 @@ add_executable(f446_softser ${SOURCE_FILES} ${HEADER_FILES})
 add_executable(cctest App/cctest.c Src/fec.c Src/rs.c App/memory-os.c)
 add_executable(ptrtest App/ptrtest.c App/memory-os.c App/bitrev.h Src/mac.c
         Src/crc16.c)
+add_executable(queuetest App/queuetest.c Src/queue.c)
 
 # Include directories
 include_directories(App)

@@ -15,6 +15,7 @@
 #include "macros.h"
 #include "crc16.h"
 #include "fec.h"
+#include "mac.h"
 
 #define PHY_RX_BUFFER_SIZE 2048
 #define PHY_RCV_BUFFER_SIZE 1024

@@ -12,6 +12,9 @@ int main(void) {
   uint16_t EncLen;
   int i;
 
+  // Initialize MAC layer
+  MAC_Init();
+
   F = MAC_FrameAlloc(0);
   //memcpy(F->Payload.Data, PayloadTest, sizeof(PayloadTest));
   F->FrameControl.DestinationAddressMode = MAC_ADDRESS_SHORT;
@@ -23,7 +26,6 @@ int main(void) {
   F->Payload.Command.CommandFrameId = MAC_COMMAND_ASSOC_RESPONSE;
   F->Payload.Command.ShortAddress = 3450;
   F->Payload.Command.Status = MAC_ASSOCIATION_FAILED;
-  F->Sequence = 230;
 
   EncLen = MAC_FrameEncodeLen(F);
   EncTest = MEM_Alloc(EncLen);

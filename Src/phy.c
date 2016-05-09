@@ -181,7 +181,9 @@ void PHY_RX_Handler(void) {
       case PHY_RX_STATUS_PROCESS_PAYLOAD:
         FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer,
                       PHY.RX.PayloadLen);
-        HAL_UART_Transmit(&huart2,(uint8_t *) "X", 1, 0xff);
+        // Initiate MAC layer payload process
+        MAC_API_DataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
+        //HAL_UART_Transmit(&huart2,(uint8_t *) "X", 1, 0xff);
         //HAL_UART_Transmit(&huart2, PHY.RX.RcvDecodeBuffer,
         //                  PHY.RX.PayloadLen, 0xff);
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
