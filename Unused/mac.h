@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "macros.h"
 #include "queue.h"
+#include "phy.h"
 #ifdef APP_DEBUG
 #include "bitrev.h"
 #else
@@ -15,10 +16,10 @@
 
 // MAC Constants
 #define MAC_EXTENDED_ADDRESS 0x12345678
-#define MAC_ACK_WAIT_DURATION 100 // in ms
+#define MAC_ACK_WAIT_DURATION 1000 // in ms
 #define MAC_BACKOFF_DURATION ((uint32_t) (RND_Get() & 0x1f) * 20)
 #define MAC_ACK_MAX_RETRIES 3
-#define MAC_QUEUE_SIZE 5
+#define MAC_QUEUE_SIZE 8
 #define MAC_DEVICE_ADDRESS_SIZE 10
 
 #define MAC_ADDRESS_UNKNOWN 0xffff
@@ -164,13 +165,27 @@ typedef struct {
   MAC_TransmissionStatus Status;
   uint32_t TickStart;
   uint32_t TickLength;
+  uint8_t *Data;
+  uint16_t Length;
 } MAC_Transmission;
+
+typedef struct MAC_FrameList {
+  struct MAC_FrameList *Next;
+  MAC_Frame *Frame;
+} MAC_FrameList;
+
+typedef struct {
+  MAC_FrameList *Free;
+  MAC_FrameList *List;
+  LOCK_Handle Lock;
+} MAC_FrameListPool;
 
 typedef struct {
   MAC_PIB PIB;
   MAC_Queue Queue;
   MAC_Transmission Transmission;
   MAC_DeviceAddress *Devices;
+  MAC_FrameListPool FrameList;
 } MAC_Handle;
 
 void MAC_Init(void);
