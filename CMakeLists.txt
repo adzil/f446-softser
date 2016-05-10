@@ -8,10 +8,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 file(GLOB SOURCE_FILES Src/*.c)
 file(GLOB HEADER_FILES Inc/*.h)
 
-add_executable(f446_softser ${SOURCE_FILES} ${HEADER_FILES})
+file(GLOB UNUSED_FILES Unused/*)
+
+add_executable(f446_softser ${SOURCE_FILES} ${HEADER_FILES} ${UNUSED_FILES})
 add_executable(cctest App/cctest.c Src/fec.c Src/rs.c App/memory-os.c)
-add_executable(ptrtest App/ptrtest.c App/memory-os.c App/bitrev.h Src/mac.c
-        Src/crc16.c)
+add_executable(ptrtest App/ptrtest.c App/memory-os.c App/bitrev.h Src/crc16.c)
 add_executable(queuetest App/queuetest.c Src/queue.c)
 
 # Include directories
