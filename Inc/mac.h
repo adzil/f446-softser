@@ -10,6 +10,9 @@
 #include "stm32f4xx.h"
 #include "crc16.h"
 
+// Mac-specific includes
+#include "mac-frame.h"
+
 // MAC constants
 #define MAC_EXTENDED_ADDRESS 0x12345678
 #define MAC_ACK_WAIT_DURATION 1000 // in ms
@@ -21,20 +24,6 @@
 #define MAC_ADDRESS_UNKNOWN 0xffff
 #define MAC_USE_EXTENDED_ADDRESS 0xfffe
 
-typedef enum {
-  MAC_OK,
-  MAC_INVALID_CHECKSUM,
-  MAC_MEM_NOT_AVAIL,
-  MAC_INVALID_FRAME_LENGTH,
-  MAC_INVALID_ROUTINE,
-  MAC_INVALID_ADDRESSING,
-  MAC_INVALID_DEVICE_ADDRESS,
-  MAC_QUEUE_FULL
-} MAC_Status;
 
-typedef enum {
-  MAC_ASSOCIATION_SUCCESS,
-  MAC_ASSOCIATION_FAILED
-} MAC_AssociationStatus;
 
 #endif // __MAC__
