@@ -14,7 +14,6 @@ typedef enum {
 } MAC_AddressMode;
 
 typedef enum {
-  MAC_FRAME_TYPE_BEACON = 0x00,
   MAC_FRAME_TYPE_DATA = 0x01,
   MAC_FRAME_TYPE_ACK = 0x02,
   MAC_FRAME_TYPE_COMMAND = 0x03
@@ -24,7 +23,6 @@ typedef enum {
   MAC_COMMAND_ASSOC_REQUEST = 0x00,
   MAC_COMMAND_ASSOC_RESPONSE = 0x01,
   MAC_COMMAND_DATA_REQUEST = 0x04,
-  MAC_COMMAND_BEACON_REQUEST = 0x06
 } MAC_CommandFrameId;
 
 typedef enum {
@@ -54,10 +52,6 @@ typedef struct {
 } MAC_FrameAddressGroup;
 
 typedef struct {
-  MAC_VPANCoordinator VPANCoordinator     : 1;
-} MAC_FrameBeaconPayload;
-
-typedef struct {
   MAC_CommandFrameId CommandFrameId;
   uint16_t ShortAddress;
   MAC_AssociationStatus Status;
@@ -66,7 +60,6 @@ typedef struct {
 typedef struct {
   union {
     uint8_t *Data;
-    MAC_FrameBeaconPayload Beacon;
     MAC_FrameCommandPayload Command;
   };
   int Start;

@@ -4,10 +4,9 @@
 // Library includes
 #include <inttypes.h>
 #include <string.h>
-#include "memory.h"
+#include "devincludes.h"
 #include "queue.h"
 #include "phy.h"
-#include "stm32f4xx.h"
 #include "crc16.h"
 
 // Mac-specific includes

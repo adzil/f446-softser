@@ -1,11 +1,13 @@
 // Pseudo-Random number generator
 #include <random.h>
+#include "stm32f4xx.h"
 #include "lock.h"
+#include "adc.h"
 
 LOCK_Handle RND_Lock;
 
 uint8_t RND_Get(void) {
-	int i;
+  int i;
   uint32_t RndVal;
 
   RndVal = 0;

@@ -9,9 +9,9 @@ file(GLOB SOURCE_FILES Src/*.c)
 file(GLOB HEADER_FILES Inc/*.h)
 
 add_executable(f446_softser ${SOURCE_FILES} ${HEADER_FILES})
-add_executable(cctest App/cctest.c Src/fec.c Src/rs.c App/memory-os.c)
-add_executable(ptrtest App/ptrtest.c App/memory-os.c App/bitrev.h Src/crc16.c)
-add_executable(queuetest App/queuetest.c Src/queue.c)
+add_executable(cctest App/cctest.c Src/fec.c Src/rs.c App/implx86.c)
+add_executable(ptrtest App/ptrtest.c Src/crc16.c App/implx86.c)
+add_executable(queuetest App/queuetest.c Src/queue.c App/implx86.c)
 
 # Include directories
 include_directories(App)

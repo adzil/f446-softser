@@ -1,13 +1,15 @@
 /* Self library includes */
 #include <memory.h>
-#include "debug.h"
 #include "lock.h"
 
 static uint8_t MEM_Heap[MEM_HEAP_SIZE];
+static uint8_t *MEM_XXS_Head;
+static uint8_t *MEM_XS_Head;
 static uint8_t *MEM_SM_Head;
 static uint8_t *MEM_MD_Head;
 static uint8_t *MEM_LG_Head;
 static uint8_t *MEM_XL_Head;
+static uint8_t *MEM_XXL_Head;
 
 static LOCK_Handle MEM_Lock;
 
@@ -29,17 +31,24 @@ static void mem_init_stn(int count, int size, uint8_t **head) {
 }
 
 void MEM_Init(void) {
+  mem_init_stn(MEM_XXS_COUNT, MEM_XXS_SIZE, &MEM_XXS_Head);
+  mem_init_stn(MEM_XS_COUNT, MEM_XS_SIZE, &MEM_XS_Head);
   mem_init_stn(MEM_SM_COUNT, MEM_SM_SIZE, &MEM_SM_Head);
   mem_init_stn(MEM_MD_COUNT, MEM_MD_SIZE, &MEM_MD_Head);
   mem_init_stn(MEM_LG_COUNT, MEM_LG_SIZE, &MEM_LG_Head);
   mem_init_stn(MEM_XL_COUNT, MEM_XL_SIZE, &MEM_XL_Head);
+  mem_init_stn(MEM_XXL_COUNT, MEM_XXL_SIZE, &MEM_XXL_Head);
 }
 
 void *MEM_Alloc(int size) {
   uint8_t **head, *ptr;
 
   // Resolve appropriate head pointer
-  if (size <= MEM_SM_SIZE) {
+  if (size <= MEM_XXS_SIZE) {
+    head = &MEM_XXS_Head;
+  } else if (size <= MEM_XS_SIZE) {
+    head = &MEM_XS_Head;
+  } else if (size <= MEM_SM_SIZE) {
     head = &MEM_SM_Head;
   } else if (size <= MEM_MD_SIZE) {
     head = &MEM_MD_Head;
@@ -47,6 +56,8 @@ void *MEM_Alloc(int size) {
     head = &MEM_LG_Head;
   } else if (size <= MEM_XL_SIZE) {
     head = &MEM_XL_Head;
+  } else if (size <= MEM_XXL_SIZE) {
+    head = &MEM_XXL_Head;
   } else {
     // The memory requirement is too large
     return NULL;
@@ -65,8 +76,6 @@ void *MEM_Alloc(int size) {
     *((uint8_t ***) ptr) = head;
     // Return the reserved memory address
     ptr += PTR_SIZE;
-  } else {
-    Log("WARNING: Memory exhaustion detected.\r\n");
   }
 
   // Unlock the memory operation
@@ -87,8 +96,9 @@ void MEM_Free(void *inptr) {
   // Checks if the pointer is in the heap region
   if (ptr < MEM_Heap + MEM_HEAP_SIZE) {
     // Checks if the address belongs to the memory pool
-    if (head == &MEM_SM_Head || head == &MEM_MD_Head ||
-        head == &MEM_LG_Head || head == &MEM_XL_Head) {
+    if (head == &MEM_XXS_Head || head == &MEM_XS_Head || head == &MEM_SM_Head ||
+        head == &MEM_MD_Head || head == &MEM_LG_Head ||head == &MEM_XL_Head ||
+        head == &MEM_XXL_Head) {
       // Lock the memory operation
       LOCK_Start(&MEM_Lock);
       // Move the next pointer to the freed memory
