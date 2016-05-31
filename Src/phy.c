@@ -1,10 +1,14 @@
 #include <phy.h>
+#include <string.h>
 
 PHY_HandleTypeDef PHY;
 
 uint8_t PHY_RX_MEM[PHY_RX_BUFFER_SIZE];
 uint8_t PHY_RX_RcvBufferMEM[PHY_RCV_BUFFER_SIZE];
 uint8_t PHY_RX_RcvDecodeBufferMEM[PHY_RCV_DECODE_BUFFER_SIZE];
+
+extern char rcv[128];
+extern osThreadId tid_sendSerial;
 
 /* OS Thread Handle */
 osThreadId PHY_RX_ThreadId;
@@ -182,10 +186,11 @@ void PHY_RX_Handler(void) {
         FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer,
                       PHY.RX.PayloadLen);
         // Initiate MAC layer payload process
-        MAC_API_DataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
-        //HAL_UART_Transmit(&huart2,(uint8_t *) "X", 1, 0xff);
+        //MAC_API_DataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
+				memcpy(rcv, PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
         //HAL_UART_Transmit(&huart2, PHY.RX.RcvDecodeBuffer,
         //                  PHY.RX.PayloadLen, 0xff);
+				osSignalSet(tid_sendSerial, 1);
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
         break;
 

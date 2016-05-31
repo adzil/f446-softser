@@ -51,9 +51,11 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 osThreadId tid_blinkLED;
-//osThreadId tid_sendSerial;
+osThreadId tid_sendSerial;
 osThreadId tid_checkButton;
 char Buf[1024];
+
+char rcv[128];
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
@@ -85,8 +87,8 @@ void blinkLED(void const *argument) {
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffffffff);
   }
 }
-
-/* void sendSerial(void const *argument) {
+/*
+void sendSerial(void const *argument) {
 	uint8_t *ptr;
 	uint16_t blen;
 	
@@ -102,10 +104,33 @@ void blinkLED(void const *argument) {
   }
 }*/
 
+uint8_t bitcnt(uint8_t x) {
+	x = (x & 0x55 ) + ((x >>  1) & 0x55 ); //put count of each  2 bits into those  2 bits 
+	x = (x & 0x33 ) + ((x >>  2) & 0x33 ); //put count of each  4 bits into those  4 bits 
+	x = (x & 0xf ) + ((x >>  4) & 0xf ); //put count of each  8 bits into those  8 bits
+	
+	return x;
+}
+
+void sendSerial(void const *argument) {
+	int i, errcnt;
+	
+	while(1) {
+		osSignalWait(1, osWaitForever);
+		errcnt = 0;
+		for (i = 0; i < (sizeof(TXData) - 1); i++)
+			errcnt += bitcnt(TXData[i] ^ rcv[i]);
+		sprintf(Buf, "%4d", errcnt);
+		HAL_UART_Transmit(&huart2,(uint8_t *) Buf, strlen(Buf), 0xff);
+	}
+}
+
 void checkButton(void const *argument) {
   while (1) {
     // Always send data
-    //PHY_API_SendStart(TXData, sizeof(TXData) - 1);
+    PHY_API_SendStart(TXData, sizeof(TXData) - 1);
+		
+		
     /*
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
@@ -115,7 +140,7 @@ void checkButton(void const *argument) {
 }
 
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
-//osThreadDef (sendSerial, osPriorityNormal, 1, 0);
+osThreadDef (sendSerial, osPriorityNormal, 1, 0);
 osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
 
@@ -158,7 +183,7 @@ int main(void)
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
-  //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
+  tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
   osKernelStart();

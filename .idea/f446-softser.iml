@@ -53,10 +53,14 @@
         <CLASSES>
           <root url="file://C:/cygwin64/lib/gcc/x86_64-pc-cygwin/5.3.0/include" />
           <root url="file://C:/cygwin64/usr/include" />
+          <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
+          <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
         </CLASSES>
         <SOURCES>
           <root url="file://C:/cygwin64/lib/gcc/x86_64-pc-cygwin/5.3.0/include" />
           <root url="file://C:/cygwin64/usr/include" />
+          <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/RTOS/RTX/INC" />
+          <root url="file://C:/Keil_v5/ARM/Pack/ARM/CMSIS/4.5.0/CMSIS/Include" />
         </SOURCES>
       </library>
     </orderEntry>
