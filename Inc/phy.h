@@ -6,7 +6,6 @@
 #define __PHY
 
 #include <inttypes.h>
-#include "memory.h"
 #include "buffer.h"
 #include "cmsis_os.h"
 #include "lock.h"
@@ -15,13 +14,16 @@
 #include "macros.h"
 #include "crc16.h"
 #include "fec.h"
-//#include "mac.h"
+#include "mac-core.h"
 
 #define PHY_RX_BUFFER_SIZE 2048
 #define PHY_RCV_BUFFER_SIZE 1024
 #define PHY_RCV_DECODE_BUFFER_SIZE 512
 
 #define PHY_HEADER_LEN 4
+#define PHY_HEADER_ENC_LEN FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN))
+#define PHY_PAYLOAD_ENC_LEN FEC_CC_BUFFER_LEN( \
+  FEC_RS_BUFFER_LEN(MAC_CONFIG_MAX_FRAME_BUFFER))
 
 typedef enum {
   PHY_OK,

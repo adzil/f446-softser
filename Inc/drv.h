@@ -101,8 +101,7 @@ void DRV_TX_Preload(void);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);
 
 /* Endpoints for API Calls */
-uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
-                       uint16_t PayloadLen);
+uint8_t DRV_API_SendStart(uint8_t *Data, uint16_t Length);
 void DRV_API_ReceiveComplete(void);
 // Specific APIs for timer interrupts
 void DRV_API_InputCaptureCallback(TIM_HandleTypeDef *htim);

@@ -332,7 +332,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F446xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;  ../Drivers/STM32F4xx_HAL_Driver/Inc;  ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;  ../Drivers/CMSIS/Include;  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include</IncludePath>
+              <IncludePath>../Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Include;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;..\MAC\Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -509,11 +509,6 @@
               <FileName>drv.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\drv.c</FilePath>
-            </File>
-            <File>
-              <FileName>memory.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\memory.c</FilePath>
             </File>
             <File>
               <FileName>phy.c</FileName>
@@ -1134,11 +1129,6 @@
               <FileName>drv.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\drv.c</FilePath>
-            </File>
-            <File>
-              <FileName>memory.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\memory.c</FilePath>
             </File>
             <File>
               <FileName>phy.c</FileName>

@@ -1,5 +1,4 @@
-#include <phy.h>
-#include <string.h>
+#include "phy.h"
 
 PHY_HandleTypeDef PHY;
 
@@ -57,70 +56,33 @@ void PHY_TX_CreateHeader(uint8_t *Header, uint16_t Length) {
   *((uint16_t *) (Header + 2)) = __REV16(Sum);
 }
 
-PHY_Status PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
-  uint8_t *RSData;
+void PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
+  uint8_t RSData[FEC_RS_BUFFER_LEN(MAC_CONFIG_MAX_FRAME_BUFFER)];
   uint16_t RSLen;
 
   // Create RS data
   RSLen = FEC_RS_BUFFER_LEN(Length);
-  RSData = MEM_Alloc(RSLen);
-  if (!RSData) {
-    return PHY_MEM_NOT_AVAIL;
-  }
   FEC_RS_Encode(RSData, Input, Length);
   // Create CC data
   FEC_CC_Encode(Output, RSData, RSLen);
-  // Free memory
-  MEM_Free(RSData);
-
-  return PHY_OK;
 }
 
 PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
-  uint8_t *RawHeader;
-  uint8_t *Header;
-  uint8_t *Payload;
-  uint16_t HeaderLen;
-  uint16_t PayloadLen;
+  uint8_t EncodedData[PHY_HEADER_ENC_LEN + PHY_PAYLOAD_ENC_LEN];
+	uint8_t HeaderData[PHY_HEADER_LEN];
 
   // Create header
-  RawHeader = MEM_Alloc(PHY_HEADER_LEN);
-  if (!RawHeader) return PHY_MEM_NOT_AVAIL;
-  PHY_TX_CreateHeader(RawHeader, Length);
+  PHY_TX_CreateHeader(HeaderData, Length);
   // Create encoded header
-  HeaderLen = FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
-  Header = MEM_Alloc(HeaderLen);
-  if (!Header) {
-    MEM_Free(RawHeader);
-    return PHY_MEM_NOT_AVAIL;
-  }
-  if (PHY_TX_EncodeData(Header, RawHeader, PHY_HEADER_LEN)) {
-    MEM_Free(RawHeader);
-    MEM_Free(Header);
-    return PHY_MEM_NOT_AVAIL;
-  }
-  MEM_Free(RawHeader);
+  PHY_TX_EncodeData(EncodedData, HeaderData, PHY_HEADER_LEN);
   // Create encoded data
-  PayloadLen = FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(Length));
-  Payload = MEM_Alloc(PayloadLen);
-  if (!Payload) {
-    MEM_Free(Header);
-    return PHY_MEM_NOT_AVAIL;
-  }
-  if (PHY_TX_EncodeData(Payload, Data, Length)) {
-    MEM_Free(Header);
-    MEM_Free(Payload);
-    return PHY_MEM_NOT_AVAIL;
-  }
+  PHY_TX_EncodeData((uint8_t *)(EncodedData + PHY_HEADER_ENC_LEN), Data, Length);
 
   // Retry send on error
-  while (DRV_API_SendStart(Header, HeaderLen, Payload, PayloadLen)) {
+  while (DRV_API_SendStart(EncodedData, PHY_HEADER_ENC_LEN +
+                           FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(Length)))) {
     osThreadYield();
   }
-
-  // Free memory
-  MEM_Free(Header);
-  MEM_Free(Payload);
 
   return PHY_OK;
 }

@@ -60,7 +60,7 @@ char rcv[128];
 // Required for HAL_GetTick function
 extern uint32_t os_time;
 
-uint8_t TXData[] = "Test data, should be readable on terminal.\r\n";
+uint8_t TXData[] = "Test data";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -130,7 +130,6 @@ void checkButton(void const *argument) {
     // Always send data
     PHY_API_SendStart(TXData, sizeof(TXData) - 1);
 		
-		
     /*
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
@@ -176,8 +175,6 @@ int main(void)
 //#endif
   // Initialize Optical Driver
   DRV_Init();
-  // Initialize Memory
-  MEM_Init();
   // Initialize PHY layer
   PHY_Init();
   

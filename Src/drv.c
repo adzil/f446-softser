@@ -29,6 +29,7 @@ void DRV_Init(void) {
 
   // Initiate transmitter
   DRV.TX.htim = &htim3;
+	DRV.TX.Send = DRV_TX_Buffer;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
   DRV.TX.SR.RLL = 1;
   DRV.TX.SR.Visibility = 1;
@@ -370,19 +371,13 @@ void DRV_API_ReceiveComplete(void) {
 }
 
 // General purpose send function
-uint8_t DRV_API_SendStart(uint8_t *Header, uint16_t HeaderLen, uint8_t *Payload,
-                       uint16_t PayloadLen) {
+uint8_t DRV_API_SendStart(uint8_t *Data, uint16_t Length) {
 
   if (DRV.TX.Status != DRV_TX_STATUS_RESET &&
       DRV.TX.Status != DRV_TX_STATUS_VISIBILITY) return 1;
 
-  DRV.TX.Send = DRV_TX_Buffer;
-  memcpy(DRV.TX.Send, Header, HeaderLen);
-  DRV.TX.Send += HeaderLen;
-  memcpy(DRV.TX.Send, Payload, PayloadLen);
-  DRV.TX.Send = DRV_TX_Buffer;
-
-  DRV.TX.SendLen = HeaderLen + PayloadLen;
+  memcpy(DRV.TX.Send, Data, Length);
+	DRV.TX.SendLen = Length;
 
   // Activate the transmission module
   DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
