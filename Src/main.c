@@ -49,16 +49,16 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 osThreadId tid_blinkLED;
-//osThreadId tid_sendSerial;
+osThreadId tid_sendSerial;
 osThreadId tid_checkButton;
 char Buf[1024];
-
-//char rcv[128];
+char rcv[128];
+uint16_t rcvlen;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
 
-//uint8_t TXData[] = "Test data";
+uint8_t TXData[] = "Test data input abcde\t";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,6 +109,14 @@ uint8_t bitcnt(uint8_t x) {
 	
 	return x;
 }
+
+void sendSerial(void const *argument) {
+	while(1) {
+		osSignalWait(1, osWaitForever);
+		HAL_UART_Transmit(&huart2,(uint8_t *) rcv, rcvlen, 0xffff);
+	}
+}
+
 /*
 void sendSerial(void const *argument) {
 	int i, errcnt;
@@ -122,23 +130,23 @@ void sendSerial(void const *argument) {
 		HAL_UART_Transmit(&huart2,(uint8_t *) Buf, strlen(Buf), 0xff);
 	}
 }*/
-/*
+
 void checkButton(void const *argument) {
   while (1) {
     // Always send data
     PHY_API_SendStart(TXData, sizeof(TXData) - 1);
-		
-    
+		osDelay(1000);
+    /*
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
       osDelay(200);
-    }
+    }*/
   }
 }
-*/
+
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
-//osThreadDef (sendSerial, osPriorityNormal, 1, 0);
-//osThreadDef (checkButton, osPriorityNormal, 1, 0);
+osThreadDef (sendSerial, osPriorityNormal, 1, 0);
+osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
 
 int main(void)
@@ -176,12 +184,12 @@ int main(void)
   // Initialize PHY layer
   PHY_Init();
   // Initialize MAC APP layer
-  MAC_AppInit();
+  //MAC_AppInit();
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
-  //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
-  //tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
+  tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
+  tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
   osKernelStart();
 

@@ -6,8 +6,9 @@ uint8_t PHY_RX_MEM[PHY_RX_BUFFER_SIZE];
 uint8_t PHY_RX_RcvBufferMEM[PHY_RCV_BUFFER_SIZE];
 uint8_t PHY_RX_RcvDecodeBufferMEM[PHY_RCV_DECODE_BUFFER_SIZE];
 
-//extern char rcv[128];
-//extern osThreadId tid_sendSerial;
+extern char rcv[128];
+extern uint16_t rcvlen;
+extern osThreadId tid_sendSerial;
 
 /* OS Thread Handle */
 osThreadId PHY_RX_ThreadId;
@@ -75,7 +76,7 @@ PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
   // Create encoded header
   PHY_TX_EncodeData(EncodedData, EncodedData, PHY_HEADER_LEN);
   // Create encoded data
-  PHY_TX_EncodeData((uint8_t *)(EncodedData + PHY_HEADER_ENC_LEN), Data, Length);
+  PHY_TX_EncodeData(EncodedData + PHY_HEADER_ENC_LEN, Data, Length);
 
   // Retry send on error
   while (DRV_API_SendStart(EncodedData, PHY_HEADER_ENC_LEN +
@@ -91,6 +92,7 @@ uint8_t PHY_API_DataReceived(uint8_t Data) {
 
   if (PHY.RX.TotalLen && PHY.RX.ReceiveLen >= PHY.RX.TotalLen)
     return 1;
+	
   Buffer = BUF_Write(&PHY.RX.Buffer);
   if (!Buffer) {
     // Oops! buffer is full
@@ -146,13 +148,14 @@ void PHY_RX_Handler(void) {
       case PHY_RX_STATUS_PROCESS_PAYLOAD:
         FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer,
                       PHY.RX.PayloadLen);
-        MAC_AppDataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
+        //MAC_AppDataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
         // Initiate MAC layer payload process
         //MAC_API_DataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
-				//memcpy(rcv, PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
-        //HAL_UART_Transmit(&huart2, PHY.RX.RcvDecodeBuffer,
+				memcpy(rcv, PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
+        rcvlen = PHY.RX.PayloadLen;
+			  //HAL_UART_Transmit(&huart2, PHY.RX.RcvDecodeBuffer,
         //                  PHY.RX.PayloadLen, 0xff);
-				//osSignalSet(tid_sendSerial, 1);
+				osSignalSet(tid_sendSerial, 1);
         PHY_RX_SetStatus(PHY_RX_STATUS_RESET);
         break;
 
