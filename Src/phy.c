@@ -1,4 +1,3 @@
-#include <phy.h>
 #include "phy.h"
 
 PHY_HandleTypeDef PHY;

@@ -9,7 +9,8 @@ osThreadDef(MAC_AppData, osPriorityNormal, 1, 0);
 osThreadDef(MAC_AppTimer, osPriorityNormal, 1, 0);
 
 void MAC_AppInit(void) {
-  MAC_Init(&MAC, 0x1, MAC_PIB_VPAN_COORDINATOR);
+  MAC_Init(&MAC, 0x1, MAC_PIB_VPAN_DEVICE);
+	//MAC.Pib.ShortAdr = 0x1234;
   MAC_AppTimerTid = osThreadCreate(osThread(MAC_AppTimer), NULL);
   MAC_AppDataTid = osThreadCreate(osThread(MAC_AppData), NULL);
 }
