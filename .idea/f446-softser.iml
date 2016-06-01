@@ -11,18 +11,16 @@
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Src/queue.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Src/mac-instance.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Src/mac-memory.c" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-frame.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-core.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-common.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-queue.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-pib.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/appdef.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/queue.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-instance.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-memory.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/lock.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-core.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/appdef.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-command.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/crc16.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-frame.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mac-software/Inc/mac-config.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/gpio.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Src/random.c" isTestSource="false" />
