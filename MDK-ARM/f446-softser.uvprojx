@@ -558,6 +558,46 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>mac-software</GroupName>
+          <Files>
+            <File>
+              <FileName>mac-command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-command.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-core.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-frame.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-frame.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-instance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-instance.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-memory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-memory.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\queue.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
           <GroupOption>
             <CommonProperty>
@@ -1174,6 +1214,46 @@
               <FileName>system_stm32f4xx.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>mac-software</GroupName>
+          <Files>
+            <File>
+              <FileName>mac-command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-command.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-core.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-frame.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-frame.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-instance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-instance.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-memory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-memory.c</FilePath>
+            </File>
+            <File>
+              <FileName>mac-queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\mac-queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\mac-software\Src\queue.c</FilePath>
             </File>
           </Files>
         </Group>

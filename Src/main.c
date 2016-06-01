@@ -42,8 +42,6 @@
 #include "cmsis_os.h"
 #include "macros.h"
 #include "drv.h"
-#include "random.h"
-#include "phy.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
