@@ -175,6 +175,8 @@ int main(void)
   DRV_Init();
   // Initialize PHY layer
   PHY_Init();
+  // Initialize MAC APP layer
+  MAC_AppInit();
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
