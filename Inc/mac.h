@@ -7,11 +7,15 @@
 #include "cmsis_os.h"
 #include "phy.h"
 
+#define MAC_COORDINATOR
+
 void MAC_AppInit(void);
 void MAC_AppDataReceived(uint8_t *Data, uint16_t Length);
 
 // Thread def
 void MAC_AppData(void const *argument);
+#ifndef MAC_COORDINATOR
 void MAC_AppTimer(void const *argument);
+#endif
 
 #endif // __MAC_H__

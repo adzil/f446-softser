@@ -49,20 +49,21 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 osThreadId tid_blinkLED;
-osThreadId tid_sendSerial;
-osThreadId tid_checkButton;
+//osThreadId tid_sendSerial;
+//osThreadId tid_checkButton;
 char Buf[1024];
-char rcv[128];
-uint16_t rcvlen;
+//char rcv[128];
+//uint16_t rcvlen;
 
 // Required for HAL_GetTick function
 extern uint32_t os_time;
 
-uint8_t TXData[] = "Test data input abcde\t";
+//uint8_t TXData[] = "Test data input vwxyz\t";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -101,21 +102,21 @@ void sendSerial(void const *argument) {
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
 }*/
-
+/*
 uint8_t bitcnt(uint8_t x) {
 	x = (x & 0x55 ) + ((x >>  1) & 0x55 ); //put count of each  2 bits into those  2 bits 
 	x = (x & 0x33 ) + ((x >>  2) & 0x33 ); //put count of each  4 bits into those  4 bits 
 	x = (x & 0xf ) + ((x >>  4) & 0xf ); //put count of each  8 bits into those  8 bits
 	
 	return x;
-}
-
+}*/
+/*
 void sendSerial(void const *argument) {
 	while(1) {
 		osSignalWait(1, osWaitForever);
 		HAL_UART_Transmit(&huart2,(uint8_t *) rcv, rcvlen, 0xffff);
 	}
-}
+}*/
 
 /*
 void sendSerial(void const *argument) {
@@ -130,23 +131,22 @@ void sendSerial(void const *argument) {
 		HAL_UART_Transmit(&huart2,(uint8_t *) Buf, strlen(Buf), 0xff);
 	}
 }*/
-
+/*
 void checkButton(void const *argument) {
   while (1) {
     // Always send data
     PHY_API_SendStart(TXData, sizeof(TXData) - 1);
-		osDelay(1000);
-    /*
+    
     if (!__GPIO_READ(GPIOC, 13)) {
       PHY_API_SendStart(TXData, sizeof(TXData) - 1);
       osDelay(200);
-    }*/
+    }/
   }
 }
-
+*/
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
-osThreadDef (sendSerial, osPriorityNormal, 1, 0);
-osThreadDef (checkButton, osPriorityNormal, 1, 0);
+//osThreadDef (sendSerial, osPriorityNormal, 1, 0);
+//osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
 
 int main(void)
@@ -184,12 +184,12 @@ int main(void)
   // Initialize PHY layer
   PHY_Init();
   // Initialize MAC APP layer
-  //MAC_AppInit();
+  MAC_AppInit();
   
   // Create threads
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
-  tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
-  tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
+  //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
+  //tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
   osKernelStart();
 
@@ -232,7 +232,10 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  HAL_RCC_OscConfig(&RCC_OscInitStruct);
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -240,19 +243,37 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
-  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
   /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(SysTick_IRQn, 3, 0);
 }
 
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @param  None
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler */
+  /* User can add his own implementation to report the HAL error return state */
+  while(1) 
+  {
+  }
+  /* USER CODE END Error_Handler */ 
+}
 
 #ifdef USE_FULL_ASSERT
 

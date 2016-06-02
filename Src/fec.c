@@ -207,7 +207,7 @@ void FEC_RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
     // Empty the data buffer
     memset(Data, 0, 15);
     // Check for data count
-    if (rscount == 0) {
+    if (rscount == 0 && PadDataLen != 0) {
       datacount = PadDataLen;
     } else {
       datacount = 7;
@@ -227,7 +227,7 @@ void FEC_RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
       }
       NibbleWrite(Out, id, Data[outcount++]);
       // Update the id
-      if (id < PadLen) {
+      if (id < PadLen || PadDataLen == 0) {
         id += Depth;
       } else {
         id += Depth - 1;
@@ -265,7 +265,7 @@ void FEC_RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
     incount = 0;
     for (id = itercount++; id < EncodedLen;) {
       // Align zeroes
-      if (rscount == 0) {
+      if (rscount == 0 && PadDataLen != 0) {
         if (incount == PadDataLen)
           incount = 7;
         else if (incount >= 15)
@@ -273,7 +273,7 @@ void FEC_RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length) {
       }
       Data[incount++] = NibbleRead(In, id);
       // Update the id
-      if (id < PadLen) {
+      if (id < PadLen || PadDataLen == 0) {
         id += Depth;
       } else {
         id += Depth - 1;
