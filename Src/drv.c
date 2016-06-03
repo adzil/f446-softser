@@ -7,6 +7,8 @@
 
 /* Self header includes */
 #include <drv.h>
+#include <stm32f4xx_hal_tim.h>
+#include <stm32f446xx.h>
 
 /* Global variables */
 // Driver handle variable
@@ -25,16 +27,28 @@ void DRV_Init(void) {
   // Initiate receiver
   DRV.RX.htim = &htim2;
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
+#ifdef MAC_COORDINATOR
+  DRV.RX.SR.RLL = 0;
+#else
   DRV.RX.SR.RLL = 1;
+#endif
 
   // Initiate transmitter
   DRV.TX.htim = &htim3;
 	DRV.TX.Send = DRV_TX_Buffer;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
+#ifdef MAC_COORDINATOR
+  DRV.TX.htim->Instance->PSC = 1;
+  DRV.TX.htim->Instance->EGR |= TIM_EGR_UG;
   DRV.TX.SR.RLL = 1;
   DRV.TX.SR.Visibility = 1;
   DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
-
+#else
+  DRV.TX.htim->Instance->PSC = 9;
+  DRV.TX.htim->Instance->EGR |= TIM_EGR_UG;
+  DRV.TX.SR.RLL = 0;
+  DRV.TX.SR.Visibility = 0;
+#endif
   // Initialize IR output
   TIM4->CCR1 = 2210;
   HAL_TIM_Base_Init(&htim4);
@@ -337,6 +351,10 @@ void DRV_TX_Preload(void) {
   if (DRV.TX.SR.RLL && DRV.TX.Status == DRV_TX_STATUS_ACTIVE) {
     DRV.TX.PreloadDataLen *= 2;
   }
+}
+
+DRV_TX_StatusTypeDef DRV_TX_GetStatus(void) {
+  return DRV.TX.Status;
 }
 
 // General purpose state machine set with some configurations

@@ -7,7 +7,9 @@
 #include "cmsis_os.h"
 #include "phy.h"
 
+#if (DEV_CONFIG == 0)
 #define MAC_COORDINATOR
+#endif
 
 void MAC_AppInit(void);
 void MAC_AppDataReceived(uint8_t *Data, uint16_t Length);

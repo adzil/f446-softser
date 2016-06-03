@@ -96,6 +96,7 @@ void DRV_RX_SyncHandler(void);
 void DRV_RX_IdleHandler(void);
 void DRV_RX_SetStatus(DRV_RX_StatusTypeDef Status);
 
+DRV_TX_StatusTypeDef DRV_TX_GetStatus(void);
 void DRV_TX_SetData(void);
 void DRV_TX_Preload(void);
 void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status);

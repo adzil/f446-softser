@@ -176,7 +176,7 @@ int main(void)
 //#ifdef  USE_FULL_ASSERT
   // Board - Serial identification
   sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication "
-      "Project\r\n---\r\n\r\n");
+      "Project\r\n---\r\nDEV_CONFIG=%d\r\n\r\n", DEV_CONFIG);
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
 //#endif
   // Initialize Optical Driver
