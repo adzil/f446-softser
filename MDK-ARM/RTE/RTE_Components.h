@@ -4,7 +4,7 @@
  *      *** Do not modify ! ***
  *
  * Project: 'f446-softser' 
- * Target:  'f446-softser-dev2' 
+ * Target:  'f446-softser-dev1' 
  */
 
 #ifndef RTE_COMPONENTS_H

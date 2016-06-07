@@ -48,7 +48,9 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#ifdef MAC_COORDINATOR
 osThreadId tid_blinkLED;
+#endif
 //osThreadId tid_sendSerial;
 //osThreadId tid_checkButton;
 char Buf[1024];
@@ -75,6 +77,7 @@ uint32_t HAL_GetTick(void) {
   return os_time;
 }
 
+#ifdef MAC_COORDINATOR
 void blinkLED(void const *argument) {
   while (1) {
     __GPIO_WRITE(GPIOA, 5, GPIO_PIN_SET);
@@ -86,6 +89,7 @@ void blinkLED(void const *argument) {
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffffffff);
   }
 }
+#endif
 /*
 void sendSerial(void const *argument) {
 	uint8_t *ptr;
@@ -144,7 +148,9 @@ void checkButton(void const *argument) {
   }
 }
 */
+#ifdef MAC_COORDINATOR
 osThreadDef (blinkLED, osPriorityNormal, 1, 0);
+#endif
 //osThreadDef (sendSerial, osPriorityNormal, 1, 0);
 //osThreadDef (checkButton, osPriorityNormal, 1, 0);
 /* USER CODE END 0 */
@@ -189,7 +195,9 @@ int main(void)
   MAC_AppInit();
   
   // Create threads
+#ifdef MAC_COORDINATOR
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
+#endif
   //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   //tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
   // Start thread execution
@@ -203,7 +211,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1) {
     osDelay(1000);
+#ifdef MAC_COORDINATOR
     osSignalSet(tid_blinkLED, 0x0001);
+#endif
   }
   /* USER CODE END WHILE */
 
