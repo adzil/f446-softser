@@ -45,6 +45,9 @@ void FEC_CC_DecodeInput(uint8_t Input);
 void FEC_CC_DecodeInit(uint8_t *Output, uint16_t Length);
 FEC_Status FEC_CC_DecodeComplete(void);
 
+void FEC_BYPASS_DecodeInit(uint8_t *Output, uint16_t Length);
+void FEC_BYPASS_DecodeInput(uint8_t Input);
+
 void FEC_RS_Encode(uint8_t *OutPtr, uint8_t *InPtr, int Length);
 void FEC_RS_Decode(uint8_t *OutPtr, uint8_t *InPtr, int Length);
 

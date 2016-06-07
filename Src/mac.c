@@ -49,7 +49,7 @@ void MAC_AppData(void const *argument) {
 #ifndef MAC_COORDINATOR
       if (Ret != MAC_STATUS_NO_DELAY)
 				//osDelay(500);
-			  osDelay(100 * ((RND_Get() % 50) + 1));
+			  osDelay(25 * ((RND_Get() % 20) + 1));
 #endif
       PHY_API_SendStart(Data, Length);
       do {
@@ -59,9 +59,9 @@ void MAC_AppData(void const *argument) {
       if (Ret == MAC_STATUS_OK) {
         Ticks = HAL_GetTick();
 #ifndef MAC_COORDINATOR
-        while(HAL_GetTick() - Ticks < 750)
+        while(HAL_GetTick() - Ticks < 1000)
 #else
-        while (HAL_GetTick() - Ticks < 1500)
+        while (HAL_GetTick() - Ticks < 500)
 #endif
         {
 					if (!MAC.Tx.Retries) break;
@@ -80,19 +80,19 @@ void MAC_AppData(void const *argument) {
 #ifndef MAC_COORDINATOR
 void MAC_AppTimer(void const *argument) {
   while (1) {
-    osDelay(2000);
     if (MAC.Pib.AssociatedCoord == MAC_PIB_ASSOCIATED_RESET) {
+      osDelay(2000);
       if (MAC.Pib.CoordExtendedAdr == 0 &&
           MAC.Pib.CoordShortAdr == MAC_CONST_BROADCAST_ADDRESS) {
         MAC_CmdDiscoverRequestSend(&MAC);
       } else {
         MAC_CmdAssocRequestSend(&MAC);
-				osDelay(3000);
+				osDelay(2000);
         MAC_CmdDataRequestSend(&MAC);
-				osDelay(8000);
+				osDelay(5000);
       }
     } else {
-			osDelay(4000);
+			osDelay(5000);
       //MAC_CmdDataRequestSend(&MAC);
 			//osDelay(2500);
 			DummyBPM[3] = 58 + (RND_Get() % 15);

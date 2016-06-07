@@ -72,6 +72,20 @@ void FEC_Init(void) {
   INIT_RS(4, 0x13, 1, 1, 8);
 }
 
+void FEC_BYPASS_DecodeInit(uint8_t *Output, uint16_t Length) {
+  CC.Output = Output;
+  CC.OutputLength = Length;
+}
+
+void FEC_BYPASS_DecodeInput(uint8_t Input) {
+  if (!CC.Output || CC.OutputLength == 0xffff) return;
+
+  *(CC.Output++) = Input;
+
+  if (!--CC.OutputLength)
+    CC.OutputLength = 0xffff;
+}
+
 void FEC_CC_DecodeInit(uint8_t *Output, uint16_t Length) {
   int i;
 

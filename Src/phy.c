@@ -65,11 +65,15 @@ void PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
   RSLen = FEC_RS_BUFFER_LEN(Length);
   FEC_RS_Encode(RSData, Input, Length);
   // Create CC data
+#ifdef MAC_COORDINATOR
   FEC_CC_Encode(Output, RSData, RSLen);
+#else
+  memcpy(Output, RSData, RSLen);
+#endif
 }
 
 PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
-  uint8_t EncodedData[PHY_HEADER_ENC_LEN + PHY_PAYLOAD_ENC_LEN];
+  uint8_t EncodedData[PHY_HEADER_ENC_LEN + PHY_PAYLOAD_MAX_ENC_LEN];
 
   // Create header
   PHY_TX_CreateHeader(EncodedData, Length);
@@ -80,7 +84,7 @@ PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
 
   // Retry send on error
   while (DRV_API_SendStart(EncodedData, PHY_HEADER_ENC_LEN +
-                           FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(Length)))) {
+                           PHY_PAYLOAD_ENC_LEN(Length))) {
     osThreadYield();
   }
 
@@ -120,11 +124,19 @@ void PHY_RX_Handler(void) {
   // Check for last status
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
     // Initialize for Header retrieval
+#ifndef MAC_COORDINATOR
     FEC_CC_DecodeInit(PHY.RX.RcvBuffer, FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
+#else
+    FEC_BYPASS_DecodeInit(PHY.RX.RcvBuffer, PHY_HEADER_DEC_LEN);
+#endif
     PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_HEADER);
   }
 
+#ifndef MAC_COORDINATOR
   FEC_CC_DecodeInput(*Buffer);
+#else
+  FEC_BYPASS_DecodeInput(*Buffer);
+#endif
   
   if (FEC_CC_DecodeComplete() == FEC_OK) {
     switch (PHY.RX.Status) {
@@ -136,12 +148,15 @@ void PHY_RX_Handler(void) {
         }
 
         PHY.RX.PayloadLen = __REV16(*((uint16_t *)PHY.RX.RcvDecodeBuffer));
-        PHY.RX.TotalLen =
-            FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY_HEADER_LEN)) +
-            FEC_CC_BUFFER_LEN(FEC_RS_BUFFER_LEN(PHY.RX.PayloadLen));
-
+        PHY.RX.TotalLen = PHY_HEADER_DEC_LEN +
+                          PHY_PAYLOAD_DEC_LEN(PHY.RX.PayloadLen);
+#ifndef MAC_COORDINATOR
         FEC_CC_DecodeInit(PHY.RX.RcvBuffer,
                           FEC_RS_BUFFER_LEN(PHY.RX.PayloadLen));
+#else
+        FEC_BYPASS_DecodeInit(PHY.RX.RcvBuffer,
+                              PHY_PAYLOAD_DEC_LEN(PHY.RX.PayloadLen));
+#endif
         PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_PAYLOAD);
         break;
 
