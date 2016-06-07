@@ -174,10 +174,12 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 //#ifdef  USE_FULL_ASSERT
+#ifndef MAC_COORDINATOR
   // Board - Serial identification
   sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication "
       "Project\r\n---\r\nDEV_CONFIG=%d\r\n\r\n", DEV_CONFIG);
   HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xffff);
+#endif
 //#endif
   // Initialize Optical Driver
   DRV_Init();

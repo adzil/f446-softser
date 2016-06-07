@@ -44,7 +44,7 @@ void DRV_Init(void) {
   DRV.TX.SR.Visibility = 1;
   DRV_TX_SetStatus(DRV_TX_STATUS_VISIBILITY);
 #else
-  DRV.TX.htim->Instance->PSC = 9;
+  DRV.TX.htim->Instance->PSC = 19;
   DRV.TX.htim->Instance->EGR |= TIM_EGR_UG;
   DRV.TX.SR.RLL = 0;
   DRV.TX.SR.Visibility = 0;

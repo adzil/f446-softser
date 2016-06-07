@@ -6,7 +6,13 @@ osThreadDef(MAC_AppData, osPriorityNormal, 1, 0);
 #ifndef MAC_COORDINATOR
 osThreadId MAC_AppTimerTid;
 osThreadDef(MAC_AppTimer, osPriorityNormal, 1, 0);
+osThreadId MAC_AppButtonTid;
+osThreadDef(MAC_AppButton, osPriorityNormal, 1, 0);
 #endif
+
+uint8_t DummyBPM[] = {DEV_CONFIG, 1, 0, 60};
+uint8_t DummyTemp[] = {DEV_CONFIG, 2, 3, 0};
+uint8_t SendAlert[] = {DEV_CONFIG, 3, 0, 0};
 
 void MAC_AppInit(void) {
   MAC_Init(&MAC, DEV_CONFIG + 1,
@@ -20,6 +26,7 @@ void MAC_AppInit(void) {
 	MAC.Pib.ShortAdr = (RND_Get() << 8) | RND_Get();
 #else
   MAC_AppTimerTid = osThreadCreate(osThread(MAC_AppTimer), NULL);
+  MAC_AppButtonTid = osThreadCreate(osThread(MAC_AppButton), NULL);
 #endif
   MAC_AppDataTid = osThreadCreate(osThread(MAC_AppData), NULL);
 }
@@ -30,6 +37,7 @@ void MAC_AppDataReceived(uint8_t *Data, uint16_t Length) {
 
 void MAC_AppData(void const *argument) {
   uint8_t *Data;
+	uint32_t Ticks;
   size_t Length;
   MAC_Status Ret;
   DRV_TX_StatusTypeDef Status;
@@ -38,18 +46,32 @@ void MAC_AppData(void const *argument) {
     Ret = MAC_CoreFrameSend(&MAC, &Data, &Length);
 
     if (Ret != MAC_STATUS_NO_DATA) {
+#ifndef MAC_COORDINATOR
       if (Ret != MAC_STATUS_NO_DELAY)
-			  osDelay(100 * ((RND_Get() % 10) + 1));
+				//osDelay(500);
+			  osDelay(100 * ((RND_Get() % 50) + 1));
+#endif
       PHY_API_SendStart(Data, Length);
       do {
         osThreadYield();
         Status = DRV_TX_GetStatus();
-      } while (Status == DRV_TX_STATUS_SYNC || Status == DRV_TX_STATUS_ACTIVE);
-      if (Ret == MAC_STATUS_NO_ACK)
-			  osDelay(50);
-      else
-        osDelay(500);
+      } while (Status == DRV_TX_STATUS_SYNC || Status == DRV_TX_STATUS_ACTIVE  || Status == DRV_TX_STATUS_STOP);
+      if (Ret == MAC_STATUS_OK) {
+        Ticks = HAL_GetTick();
+#ifndef MAC_COORDINATOR
+        while(HAL_GetTick() - Ticks < 750)
+#else
+        while (HAL_GetTick() - Ticks < 1500)
+#endif
+        {
+					if (!MAC.Tx.Retries) break;
+					osThreadYield();
+				}
+			}
     } else {
+#ifndef MAC_COORDINATOR
+      osSignalSet(MAC_AppTimerTid, 1);
+#endif
 			osThreadYield();
 		}
   }
@@ -58,19 +80,36 @@ void MAC_AppData(void const *argument) {
 #ifndef MAC_COORDINATOR
 void MAC_AppTimer(void const *argument) {
   while (1) {
+    osDelay(2000);
     if (MAC.Pib.AssociatedCoord == MAC_PIB_ASSOCIATED_RESET) {
       if (MAC.Pib.CoordExtendedAdr == 0 &&
           MAC.Pib.CoordShortAdr == MAC_CONST_BROADCAST_ADDRESS) {
         MAC_CmdDiscoverRequestSend(&MAC);
       } else {
         MAC_CmdAssocRequestSend(&MAC);
-        osDelay(1000);
+				osDelay(3000);
         MAC_CmdDataRequestSend(&MAC);
+				osDelay(8000);
       }
     } else {
-      MAC_CmdDataRequestSend(&MAC);
+			osDelay(4000);
+      //MAC_CmdDataRequestSend(&MAC);
+			//osDelay(2500);
+			DummyBPM[3] = 58 + (RND_Get() % 15);
+			DummyTemp[3] = 70 + (RND_Get() % 10);
+      MAC_GenTxData(&MAC, DummyBPM, sizeof(DummyBPM));
+      MAC_GenTxData(&MAC, DummyTemp, sizeof(DummyTemp));
     }
-    osDelay(5000);
+		osSignalWait(1, osWaitForever);
+  }
+}
+
+void MAC_AppButton(void const *argument) {
+  while (1) {
+    if (!__GPIO_READ(GPIOC, 13)) {
+      MAC_GenTxData(&MAC, SendAlert, sizeof(SendAlert));
+      osDelay(1000);
+    }
   }
 }
 #endif
