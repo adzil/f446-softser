@@ -17,6 +17,8 @@
 #include "phy.h"
 #include "string.h"
 
+#define DRV_TEST 40
+
 #define DRV_RX_IDLE_COUNT 4
 #define DRV_RX_SYNC_COUNT 8
 #define DRV_RX_WAIT_COUNT 200

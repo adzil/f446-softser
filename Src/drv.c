@@ -27,17 +27,20 @@ void DRV_Init(void) {
   // Initiate receiver
   DRV.RX.htim = &htim2;
   DRV_RX_SetStatus(DRV_RX_STATUS_RESET);
-#ifdef MAC_COORDINATOR
-  DRV.RX.SR.RLL = 0;
-#else
+#if defined(DRV_TEST) || !defined(MAC_COORDINATOR)
   DRV.RX.SR.RLL = 1;
+#else
+  DRV.RX.SR.RLL = 0;
 #endif
 
   // Initiate transmitter
   DRV.TX.htim = &htim3;
 	DRV.TX.Send = DRV_TX_Buffer;
   DRV_TX_SetStatus(DRV_TX_STATUS_RESET);
-#ifdef MAC_COORDINATOR
+#ifdef DRV_TEST
+  DRV.TX.htim->Instance->CCR1 = DRV.TX.htim->Instance->ARR / 4;
+#endif
+#if defined(DRV_TEST) || defined(MAC_COORDINATOR)
   DRV.TX.htim->Instance->PSC = 1;
   DRV.TX.htim->Instance->EGR |= TIM_EGR_UG;
   DRV.TX.SR.RLL = 1;
@@ -96,9 +99,11 @@ void DRV_RX_ActiveHandler(void) {
     // Extract the actual 8 bit data
     Data = DRV.RX.DataBit & 0xff;
     if (PHY_API_DataReceived(Data)) {
+#ifndef DRV_TEST
       // Process incoming message delay
       if (DRV.RX.Status == DRV_RX_STATUS_ACTIVE)
         DRV_RX_SetStatus(DRV_RX_STATUS_BUSY);
+#endif
     }
   }
 }
@@ -368,13 +373,26 @@ void DRV_TX_SetStatus(DRV_TX_StatusTypeDef Status) {
     case DRV_TX_STATUS_RESET:
       // Reset status, stop all timers
       HAL_TIM_Base_Stop_IT(DRV.TX.htim);
+#ifdef DRV_TEST
+      HAL_TIM_OC_Stop_IT(DRV.TX.htim, TIM_CHANNEL_1);
+#endif
       break;
 
     case DRV_TX_STATUS_VISIBILITY:
     case DRV_TX_STATUS_SYNC:
       // Start the timer base interrupt
       HAL_TIM_Base_Start_IT(DRV.TX.htim);
+#ifdef DRV_TEST
+      HAL_TIM_OC_Stop_IT(DRV.TX.htim, TIM_CHANNEL_1);
+#endif
       break;
+
+#ifdef DRV_TEST
+    case DRV_TX_STATUS_ACTIVE:
+      HAL_TIM_Base_Start_IT(DRV.TX.htim);
+      HAL_TIM_OC_Start_IT(DRV.TX.htim, TIM_CHANNEL_1);
+      break;
+#endif
 
     default:
       // Keep compiler happy
@@ -398,7 +416,11 @@ uint8_t DRV_API_SendStart(uint8_t *Data, uint16_t Length) {
 	DRV.TX.SendLen = Length;
 
   // Activate the transmission module
+#ifdef DRV_TEST
+  DRV_TX_SetStatus(DRV_TX_STATUS_ACTIVE);
+#else
   DRV_TX_SetStatus(DRV_TX_STATUS_SYNC);
+#endif
 
   return 0;
 }
@@ -433,6 +455,13 @@ void DRV_API_InputCaptureCallback(TIM_HandleTypeDef *htim) {
 
 // Interrupt callback on Output Compare match
 void DRV_API_OutputCompareCallback(TIM_HandleTypeDef *htim) {
+
+#ifdef DRV_TEST
+  if (htim == DRV.TX.htim) {
+    DRV_RX_ActiveHandler();
+  }
+#endif
+
   // Return on timer mismatch
   if (htim != DRV.RX.htim) return;
 

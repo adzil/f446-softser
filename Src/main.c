@@ -54,6 +54,14 @@ osThreadId tid_blinkLED;
 //osThreadId tid_sendSerial;
 //osThreadId tid_checkButton;
 char Buf[1024];
+#ifdef DRV_TEST
+uint8_t TestSnd[DRV_TEST] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+uint8_t TestRcv[DRV_TEST];
+osThreadId tid_DrvTest;
+#endif
 //char rcv[128];
 //uint16_t rcvlen;
 
@@ -90,6 +98,24 @@ void blinkLED(void const *argument) {
   }
 }
 #endif
+
+#ifdef DRV_TEST
+void DrvTest(void const *argument) {
+  int i;
+
+  while (1) {
+    PHY_API_SendStart(TestSnd, DRV_TEST);
+    osSignalWait(1, osWaitForever);
+    for (i = 0; i < DRV_TEST; i++) {
+      sprintf(Buf, "%x ", TestRcv[i]);
+      HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xff);
+    }
+    HAL_UART_Transmit(&huart2, (uint8_t *) "\r\n", strlen("\r\n"), 0xff);
+  }
+}
+
+osThreadDef(DrvTest, osPriorityNormal, 1, 0);
+#endif
 /*
 void sendSerial(void const *argument) {
 	uint8_t *ptr;
@@ -106,14 +132,14 @@ void sendSerial(void const *argument) {
     //HAL_UART_Transmit(&huart2, (uint8_t *) Buf, strlen(Buf), 0xf);
   }
 }*/
-/*
+
 uint8_t bitcnt(uint8_t x) {
 	x = (x & 0x55 ) + ((x >>  1) & 0x55 ); //put count of each  2 bits into those  2 bits 
 	x = (x & 0x33 ) + ((x >>  2) & 0x33 ); //put count of each  4 bits into those  4 bits 
 	x = (x & 0xf ) + ((x >>  4) & 0xf ); //put count of each  8 bits into those  8 bits
 	
 	return x;
-}*/
+}
 /*
 void sendSerial(void const *argument) {
 	while(1) {
@@ -180,7 +206,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 //#ifdef  USE_FULL_ASSERT
-#ifndef MAC_COORDINATOR
+#if !defined(MAC_COORDINATOR) || defined(DRV_TEST)
   // Board - Serial identification
   sprintf(Buf, "\x0cNUCLEO-F446 Debug Terminal\r\nVisible Light Communication "
       "Project\r\n---\r\nDEV_CONFIG=%d\r\n\r\n", DEV_CONFIG);
@@ -191,12 +217,17 @@ int main(void)
   DRV_Init();
   // Initialize PHY layer
   PHY_Init();
+#ifndef DRV_TEST
   // Initialize MAC APP layer
   MAC_AppInit();
+#endif
   
   // Create threads
 #ifdef MAC_COORDINATOR
   tid_blinkLED = osThreadCreate (osThread(blinkLED), NULL);
+#endif
+#ifdef DRV_TEST
+  tid_DrvTest = osThreadCreate(osThread(DrvTest), NULL);
 #endif
   //tid_sendSerial = osThreadCreate (osThread(sendSerial), NULL);
   //tid_checkButton = osThreadCreate (osThread(checkButton), NULL);
@@ -204,7 +235,9 @@ int main(void)
   osKernelStart();
 
   // Run codes
+#ifndef DRV_TEST
   DRV_RX_Start();
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -58,14 +58,20 @@ void PHY_TX_CreateHeader(uint8_t *Header, uint16_t Length) {
 }
 
 void PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
-  uint8_t RSData[FEC_RS_BUFFER_LEN(MAC_CONFIG_MAX_FRAME_BUFFER)];
+  uint8_t RSData[FEC_RS_BUFFER_LEN(
+#ifdef DRV_TEST
+	DRV_TEST
+#else
+	MAC_CONFIG_MAX_FRAME_BUFFER
+#endif
+	)];
   uint16_t RSLen;
 
   // Create RS data
   RSLen = FEC_RS_BUFFER_LEN(Length);
   FEC_RS_Encode(RSData, Input, Length);
   // Create CC data
-#ifdef MAC_COORDINATOR
+#if defined(DRV_TEST) || defined(MAC_COORDINATOR)
   FEC_CC_Encode(Output, RSData, RSLen);
 #else
   memcpy(Output, RSData, RSLen);
@@ -73,17 +79,32 @@ void PHY_TX_EncodeData(uint8_t *Output, uint8_t *Input, uint16_t Length) {
 }
 
 PHY_Status PHY_API_SendStart(uint8_t *Data, uint16_t Length) {
-  uint8_t EncodedData[PHY_HEADER_ENC_LEN + PHY_PAYLOAD_MAX_ENC_LEN];
+  uint8_t EncodedData[
+#ifdef DRV_TEST
+	PHY_PAYLOAD_ENC_LEN(DRV_TEST)
+#else
+	PHY_HEADER_ENC_LEN + PHY_PAYLOAD_MAX_ENC_LEN
+#endif
+	];
 
+#ifndef DRV_TEST
   // Create header
   PHY_TX_CreateHeader(EncodedData, Length);
   // Create encoded header
   PHY_TX_EncodeData(EncodedData, EncodedData, PHY_HEADER_LEN);
+#endif
   // Create encoded data
-  PHY_TX_EncodeData(EncodedData + PHY_HEADER_ENC_LEN, Data, Length);
+  PHY_TX_EncodeData(EncodedData
+#ifndef DRV_TEST
+                    + PHY_HEADER_ENC_LEN
+#endif
+                    , Data, Length);
 
   // Retry send on error
-  while (DRV_API_SendStart(EncodedData, PHY_HEADER_ENC_LEN +
+  while (DRV_API_SendStart(EncodedData,
+#ifndef DRV_TEST
+                           PHY_HEADER_ENC_LEN +
+#endif
                            PHY_PAYLOAD_ENC_LEN(Length))) {
     osThreadYield();
   }
@@ -124,12 +145,20 @@ void PHY_RX_Handler(void) {
   // Check for last status
   if (PHY.RX.Status == PHY_RX_STATUS_RESET) {
     // Initialize for Header retrieval
-#ifndef MAC_COORDINATOR
+#if defined(DRV_TEST)
+    FEC_CC_DecodeInit(PHY.RX.RcvBuffer, FEC_RS_BUFFER_LEN(DRV_TEST));
+#elif !defined(MAC_COORDINATOR)
     FEC_CC_DecodeInit(PHY.RX.RcvBuffer, FEC_RS_BUFFER_LEN(PHY_HEADER_LEN));
 #else
     FEC_BYPASS_DecodeInit(PHY.RX.RcvBuffer, PHY_HEADER_DEC_LEN);
 #endif
+#ifdef DRV_TEST
+    PHY.RX.PayloadLen = DRV_TEST;
+    PHY.RX.TotalLen = PHY_PAYLOAD_DEC_LEN(PHY.RX.PayloadLen);
+    PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_PAYLOAD);
+#else
     PHY_RX_SetStatus(PHY_RX_STATUS_PROCESS_HEADER);
+#endif
   }
 
 #ifndef MAC_COORDINATOR
@@ -163,7 +192,12 @@ void PHY_RX_Handler(void) {
       case PHY_RX_STATUS_PROCESS_PAYLOAD:
         FEC_RS_Decode(PHY.RX.RcvDecodeBuffer, PHY.RX.RcvBuffer,
                       PHY.RX.PayloadLen);
+#ifdef DRV_TEST
+        memcpy(TestRcv, PHY.RX.RcvDecodeBuffer, DRV_TEST);
+        osSignalSet(tid_DrvTest, 1);
+#else
         MAC_AppDataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
+#endif
         // Initiate MAC layer payload process
         //MAC_API_DataReceived(PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
 				//memcpy(rcv, PHY.RX.RcvDecodeBuffer, PHY.RX.PayloadLen);
