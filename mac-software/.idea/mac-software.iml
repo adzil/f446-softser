@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-frame.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/crc16.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-command.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/main.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-core.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/queue.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-queue.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-instance.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Src/mac-memory.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-core.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-common.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-queue.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-pib.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/appdef.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/queue.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-instance.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-memory.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-config.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-frame.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/mac-command.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/crc16.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Inc/lock.h" isTestSource="false" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="Header Search Paths">
+        <CLASSES>
+          <root url="file://C:/cygwin64/lib/gcc/x86_64-pc-cygwin/5.3.0/include" />
+          <root url="file://C:/cygwin64/usr/include" />
+        </CLASSES>
+        <SOURCES>
+          <root url="file://C:/cygwin64/lib/gcc/x86_64-pc-cygwin/5.3.0/include" />
+          <root url="file://C:/cygwin64/usr/include" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+  </component>
+</module>
